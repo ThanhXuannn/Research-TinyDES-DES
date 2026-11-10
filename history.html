@@ -1,0 +1,52 @@
+{# history.html: trang lịch sử (/history), do history() render. Nhận: rows (các dòng trong bảng history của SQLite, mới nhất trước), stats (số lượt mỗi loại), db_path (đường dẫn history.db). #}
+{% extends "base.html" %}
+{% set active = 'history' %}
+{% block title %}Lịch sử{% endblock %}
+{% block heading %}Lịch sử thao tác{% endblock %}
+{% block subtitle %}Lưu bằng SQLite — không lưu khóa và nội dung tệp{% endblock %}
+{# Nút xóa lịch sử ở góc tiêu đề, confirm() hỏi lại trước khi gửi POST #}
+{% block head_extra %}
+<form method="post" action="{{ url_for('history_clear') }}" onsubmit="return confirm('Xóa toàn bộ lịch sử?')">
+  <button class="btn danger small">Xóa lịch sử</button>
+</form>
+{% endblock %}
+
+{% block content %}
+<div class="stats">
+  <div><span>Tổng thao tác</span><b>{{ rows|length }}</b></div>
+  {% for algo in ['TinyDES', 'DES', 'Brute-force', 'Benchmark', 'Kiểm thử'] %}
+  <div><span>{{ algo }}</span><b>{{ stats.get(algo, 0) }}</b></div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  {% if rows %}
+  <div class="scroll">
+    <table class="log small">
+      <tr>
+        <th>#</th><th>Thời gian</th><th>Thuật toán</th><th>Thao tác</th>
+        <th>Đầu vào</th><th>Đầu ra</th><th>Kích thước</th><th>Xử lý</th><th>Trạng thái</th><th>Ghi chú</th>
+      </tr>
+{# Mỗi dòng lịch sử là 1 hàng bảng, dòng lỗi có class "err" (nền đỏ nhạt) #}
+      {% for r in rows %}
+      <tr class="{{ 'err' if r.status == 'error' }}">
+        <td>{{ r.id }}</td>
+        <td class="nowrap">{{ r.created_at }}</td>
+        <td><span class="chip algo">{{ r.algo }}</span></td>
+        <td>{{ r.action }}</td>
+        <td class="mono breakall">{{ r.input_desc or '' }}</td>
+        <td class="mono breakall">{{ r.output_desc or '' }}</td>
+        <td class="nowrap">{{ '%d B'|format(r.size_bytes) if r.size_bytes is not none else '' }}</td>
+        <td class="nowrap">{{ '%.2f ms'|format(r.elapsed_ms) if r.elapsed_ms is not none else '' }}</td>
+        <td>{% if r.status == 'ok' %}<span class="chip ok">OK</span>{% else %}<span class="chip bad">Lỗi</span>{% endif %}</td>
+        <td>{{ r.note or '' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">Chưa có thao tác nào. Hãy thử mã hóa ở trang <a href="{{ url_for('sdes_page') }}">TinyDES Demo</a>.</div>
+  {% endif %}
+  <p class="hint">Tệp CSDL: <code>{{ db_path }}</code></p>
+</div>
+{% endblock %}
