@@ -1,0 +1,189 @@
+
+
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Mật thư An–Bình</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+
+
+<aside class="sidebar">
+
+  <a class="brand" href="index.html">
+    <span><b>Mật thư An–Bình</b><small>Đồ án DES &amp; TinyDES</small></span>
+  </a>
+  <nav>
+
+    
+      
+    <span class="nav-group">Bắt đầu</span>
+      
+    
+      
+    <a href="index.html" class="active">
+      Trang chủ
+    </a>
+      
+    
+      
+    <a href="huong-dan.html" class="">
+      Hướng dẫn
+    </a>
+      
+    
+      
+    <a href="chat.html" class="">
+      Demo: An gửi Bình
+    </a>
+      
+    
+      
+    <span class="nav-group">Thuật toán</span>
+      
+    
+      
+    <a href="tinydes.html" class="">
+      TinyDES từng bước
+    </a>
+      
+    
+      
+    <a href="des.html" class="">
+      DES: văn bản &amp; tệp
+    </a>
+      
+    
+      
+    <a href="doc-code.html" class="">
+      Đọc code cùng thuật toán
+    </a>
+      
+    
+      
+    <span class="nav-group">Bản đầy đủ</span>
+    <a href="ban-day-du.html" class="">Tấn công, kiểm thử, đo thời gian</a>
+      
+    
+  </nav>
+
+  <div class="side-foot">
+    <span class="who an">An · gửi</span>
+    <span class="who binh">Bình · nhận</span>
+    <span class="who eve">Kẻ xấu · chặn giữa</span>
+  </div>
+</aside>
+
+
+<div class="content">
+
+  <header class="page-head">
+    <div>
+      <h1>Demo mã hóa TinyDES và DES</h1>
+      <p>Mã hóa, giải mã, tấn công TinyDES, đo thời gian và kiểm thử. Thuật toán nhóm tự cài đặt trong thư mục core/</p>
+    </div>
+
+    
+  </header>
+  <main>
+
+    
+
+<div class="two-col">
+  <div class="card accent">
+    <h2 class="card-title">TinyDES <small>khối 8 bit, khóa 8 bit, 3 vòng</small></h2>
+    <form method="get" action="tinydes.html" class="form-grid">
+      <label>Bản rõ / bản mã (8 bit)
+        <input name="p" required class="mono" value="01011100">
+      </label>
+      <label>Khóa (8 bit)
+        <input name="k" required class="mono" maxlength="8" pattern="[01]{8}" value="10011010">
+      </label>
+      <div class="actions wide">
+        <button class="btn primary">Mã hóa, xem từng bước</button>
+      </div>
+    </form>
+    <p class="hint">Ví dụ trong tài liệu (trang 72): bản rõ <span class="mono">01011100</span>, khóa
+      <span class="mono">10011010</span> → bản mã <span class="mono">10010010</span>.</p>
+  </div>
+
+  <div class="card accent">
+    <h2 class="card-title">DES <small>khối 64 bit, khóa 56 bit, 16 vòng</small></h2>
+    <form method="get" action="des.html" class="form-grid">
+      <label class="wide">Văn bản
+        <textarea name="t" rows="2" required>Xin chào DES!</textarea>
+      </label>
+      <label class="wide">Khóa (8 ký tự hoặc 16 hex)
+        <input name="k" required class="mono" value="133457799BBCDFF1">
+      </label>
+      <div class="actions wide">
+        <button class="btn primary">Mã hóa, xem từng bước</button>
+      </div>
+    </form>
+    <p class="hint">Mã hóa ảnh, tệp bất kỳ: vào trang <a href="des.html">DES: văn bản &amp; tệp</a>.</p>
+  </div>
+</div>
+
+
+<div class="card">
+  <h2 class="card-title">Các chức năng của demo</h2>
+  <div class="scroll">
+    <table class="log">
+      <tr><th>Chức năng</th><th>Nhập</th><th>Kết quả</th></tr>
+      <tr><td><a href="tinydes.html">TinyDES từng bước</a></td>
+        <td>Khối 8 bit (hoặc văn bản), khóa 8 bit</td>
+        <td>K1, K2, K3 và 3 vòng Feistel của từng khối, giải mã ngược lại để kiểm tra</td></tr>
+      <tr><td><a href="des.html">DES: văn bản &amp; tệp</a></td>
+        <td>Văn bản hoặc tệp, khóa 8 ký tự / 16 hex</td>
+        <td>Bản mã hex hoặc tệp tải về, 16 khóa con, 16 vòng của khối đầu</td></tr>
+      <tr><td><a href="chat.html">Demo: An gửi Bình</a></td>
+        <td>Tin nhắn, chọn TinyDES / DES và khóa</td>
+        <td>Bản mã trên đường truyền, Bình giải mã; kẻ xấu vét cạn, chọn bản rõ, sửa tin</td></tr>
+      <tr><td><a href="ban-day-du.html">Tấn công TinyDES</a></td>
+        <td>Thông điệp và khóa bí mật, hoặc cặp bản rõ / bản mã</td>
+        <td>4 kiểu: chỉ biết bản mã, biết bản rõ, chọn bản rõ (bảng tra 256 dòng), gặp nhau ở giữa (TinyDES 2 lớp)</td></tr>
+      <tr><td><a href="ban-day-du.html">Đo thời gian</a></td>
+        <td>Không cần nhập</td>
+        <td>DES tự viết so với pycryptodome, dữ liệu 1 KB → 1 MB</td></tr>
+      <tr><td><a href="ban-day-du.html">Kiểm thử</a></td>
+        <td>Không cần nhập, hoặc tự nhập 1 ca</td>
+        <td>Ví dụ trang 72, NIST SP 800-17, đối chiếu thư viện: PASS / FAIL</td></tr>
+    </table>
+  </div>
+</div>
+
+
+<div class="card">
+  <h2 class="card-title">Đã dùng bao nhiêu lần</h2>
+  <div class="stats">
+    
+    <div><span>TinyDES</span><b>21</b></div>
+    
+    <div><span>DES</span><b>5</b></div>
+    
+    <div><span>Chat</span><b>23</b></div>
+    
+    <div><span>Brute-force</span><b>36</b></div>
+    
+    <div><span>Benchmark</span><b>3</b></div>
+    
+    <div><span>Kiểm thử</span><b>8</b></div>
+    
+  </div>
+  <p class="hint">Chi tiết từng lượt: trang <a href="ban-day-du.html">Lịch sử</a>.</p>
+</div>
+
+  </main>
+  <footer>Đồ án DES &amp; TinyDES · An gửi Bình, kẻ xấu chặn giữa · thuật toán tự cài đặt, đối chiếu với pycryptodome</footer>
+</div>
+</body>
+</html>
