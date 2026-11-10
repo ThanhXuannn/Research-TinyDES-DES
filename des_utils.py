@@ -1,4 +1,4 @@
-import des_core
+from core import des_core
 
 class DESHandler:
     """
