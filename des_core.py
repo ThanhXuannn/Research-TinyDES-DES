@@ -1,4 +1,4 @@
-import des_tables
+from core import des_tables
 
 class StandardDES:
 
