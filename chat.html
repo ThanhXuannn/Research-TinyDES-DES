@@ -1,0 +1,67 @@
+{# chat.html: phòng chat (/chat), do chat() render. Mọi thao tác (gửi tin, vét cạn, chọn bản rõ, sửa tin) do static/chat.js gọi các API /api/chat/*. #}
+{% extends "base.html" %}
+{% set active = 'chat' %}
+{% block title %}An gửi Bình{% endblock %}
+{% block heading %}An gửi tin cho Bình, kẻ xấu chặn giữa{% endblock %}
+{% block subtitle %}Mỗi tin được mã hóa thật bằng thuật toán nhóm tự viết. Gửi thử vài tin, rồi đóng vai kẻ xấu: vét cạn khóa, tấn công chọn bản rõ hoặc sửa tin.{% endblock %}
+
+{% block content %}
+{# 3 nhân vật #}
+<section class="story">
+  <div class="role an">
+    <span class="avatar">A</span>
+    <div><b>An</b><small>Người gửi. Gõ tin, máy mã hóa rồi gửi đi.</small></div>
+  </div>
+  <div class="role eve">
+    <span class="avatar">?</span>
+    <div><b>Kẻ xấu</b><small>Ngồi giữa đường truyền, thấy hết bản mã nhưng không có khóa.</small></div>
+  </div>
+  <div class="role binh">
+    <span class="avatar">B</span>
+    <div><b>Bình</b><small>Người nhận. Dùng khóa chung để giải mã.</small></div>
+  </div>
+</section>
+
+{# Khóa bí mật chung của An và Bình #}
+<section class="card secret-bar">
+  <div class="secret-text">
+    <h2 class="card-title">Khóa bí mật chung của An và Bình</h2>
+    <p class="hint">Hai người đã gặp nhau và thống nhất khóa này từ trước. Kẻ xấu không biết khóa.</p>
+  </div>
+  <div class="secret-form">
+    <div class="seg" role="radiogroup" aria-label="Thuật toán">
+      <label><input type="radio" name="chatAlgo" value="tinydes" checked><span>TinyDES <small>khóa 8 bit</small></span></label>
+      <label><input type="radio" name="chatAlgo" value="des"><span>DES <small>khóa 8 ký tự</small></span></label>
+    </div>
+    <label class="key-field">Khóa
+      <input id="chatKey" class="mono" value="11011010" maxlength="16" autocomplete="off" spellcheck="false">
+    </label>
+  </div>
+  <p class="warn-line" id="keyWarn" hidden></p>
+</section>
+
+{# Sân khấu: điện thoại An | đường truyền (kẻ xấu) | điện thoại Bình #}
+<section class="chat-stage">
+  <div class="phone an">
+    <header><span class="avatar">A</span><div><b>An</b><small>người gửi</small></div></header>
+    <div class="msgs" id="anMsgs">
+      <p class="msgs-empty">Gõ tin ở dưới rồi bấm <b>Mã hóa &amp; gửi</b>.</p>
+    </div>
+    <form class="composer" id="anForm">
+      <input id="anText" value="Hẹn gặp ở cổng trường lúc 8h tối" maxlength="200" autocomplete="off" aria-label="Tin nhắn của An">
+      <button class="btn primary" id="anSend">Mã hóa &amp; gửi</button>
+    </form>
+  </div>
+
+  <div class="wire">
+    <header><span class="avatar">?</span><div><b>Đường truyền</b><small>kẻ xấu thấy mọi thứ đi qua đây</small></div></header>
+    <div class="packets" id="packets">
+      <p class="msgs-empty">Chưa có gói tin nào. Khi An gửi, bản mã sẽ hiện ở đây. Đây là <b>tất cả</b> những gì kẻ xấu nhìn thấy.</p>
+    </div>
+  </div>
+
+  <div class="phone binh">
+    <header><span class="avatar">B</span><div><b>Bình</b><small>người nhận · giải mã bằng khóa chung</small></div></header>
+    <div class="msgs" id="binhMsgs">
+      <p class="msgs-empty">Tin An gửi sẽ hiện ở đây sau khi Bình giải mã.</p>
+    </div>
