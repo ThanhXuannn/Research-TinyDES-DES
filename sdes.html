@@ -1,0 +1,215 @@
+{# sdes.html: trang TinyDES (/sdes), do sdes_page() / sdes_demo() render. Nhận: form, sdes (kết quả), sdes_error, sbox. #}
+{% extends "base.html" %}
+{% set active = 'sdes_page' %}
+{% block title %}TinyDES Demo{% endblock %}
+{% block heading %}TinyDES từng bước: bên trong máy mã hóa của An{% endblock %}
+{% block subtitle %}An gõ bản rõ và khóa 8 bit, máy làm 3 chìa K1, K2, K3 rồi trộn 3 vòng. Ví dụ có sẵn là bài tập slide 72{% endblock %}
+
+{# Macro bitrow: vẽ dãy bit thành ô vuông. v = chuỗi bit hoặc danh sách ô, split = chèn khoảng trống trước bit này, cls = class màu #}
+{% macro bitrow(v, split=0, cls='') -%}
+<div class="bits {{ cls }}">
+  {%- for c in v -%}
+    {%- if c is string %}{% set b, src, perm = c, loop.index0, false %}{% else %}{% set b, src, perm = c.b, c.src, c.perm %}{% endif -%}
+    {%- if split and loop.index0 == split %}<span class="gap"></span>{% endif -%}
+    <span class="bit b{{ b }}{{ ' perm' if perm }}"><b>{{ b }}</b><small>{{ ('←b' ~ src) if perm else 'b' ~ src }}</small></span>
+  {%- endfor -%}
+</div>
+{%- endmacro %}
+
+{# Macro step: 1 dòng minh họa (tên bước + nội dung), present.js hiện lần lượt khi trình chiếu #}
+{% macro step(label, desc='') -%}
+<div class="sl step-unit">
+  <div class="sl-label"><b>{{ label }}</b>{% if desc %}<small>{{ desc }}</small>{% endif %}</div>
+  <div class="sl-body">{{ caller() }}</div>
+</div>
+{%- endmacro %}
+
+{# Macro sbox_table: bảng S-box 4x16, tô ô được tra (hit = {row, col}) #}
+{% macro sbox_table(box, hit, cls) -%}
+<div class="scroll">
+<table class="sbox mini wide16">
+  <tr><th>b0b5 \ b1b2b3b4</th>{% for c in range(16) %}<th>{{ '%X'|format(c) }}</th>{% endfor %}</tr>
+  {% for row in box %}{% set r = loop.index0 %}
+  <tr><th>{{ r }}</th>
+    {% for v in row %}<td class="{{ cls if r == hit.row and loop.index0 == hit.col }}">{{ '%X'|format(v) }}</td>{% endfor %}
+  </tr>
+  {% endfor %}
+</table>
+</div>
+{%- endmacro %}
+
+{% block content %}
+<div class="card">
+{# Form nhập: gửi POST tới sdes_demo(), điền lại giá trị vừa nhập #}
+  <form method="post" action="{{ url_for('sdes_demo') }}" class="form-grid">
+    <label>Khóa 8 bit
+      <input name="sdes_key" maxlength="8" pattern="[01]{8}" required class="mono"
+             value="{{ form.get('sdes_key', '10011010') }}" placeholder="10011010">
+    </label>
+    <label>Dạng dữ liệu
+      <select name="sdes_fmt">
+        <option value="bin" {% if form.get('sdes_fmt') != 'text' %}selected{% endif %}>Nhị phân (khối 8 bit)</option>
+        <option value="text" {% if form.get('sdes_fmt') == 'text' %}selected{% endif %}>Văn bản (bản mã nhập hex)</option>
+      </select>
+    </label>
+    <label class="wide">Dữ liệu đầu vào
+      <input name="sdes_input" required class="mono" value="{{ form.get('sdes_input', '01011100') }}"
+             placeholder="01011100  hoặc  Hello">
+    </label>
+    <div class="actions wide">
+      <button name="sdes_action" value="enc" class="btn primary">Mã hóa</button>
+      <button name="sdes_action" value="dec" class="btn">Giải mã</button>
+    </div>
+  </form>
+  {% if sdes_error %}<p class="error">{{ sdes_error }}</p>{% endif %}
+</div>
+
+{# Chưa có kết quả thì hiện hướng dẫn, có rồi thì hiện phần bên dưới #}
+{% if not sdes %}
+<div class="card"><div class="empty">Bấm <b>Mã hóa</b> để xem từng bước: sinh khóa K1, K2, K3 → vòng 1 → vòng 2 → vòng 3 → bản mã C = L3 R3</div></div>
+{% else %}
+
+<!-- ===================== KẾT QUẢ ===================== -->
+<div class="card result">
+  <h2 class="card-title">Kết quả {{ 'mã hóa' if sdes.action == 'enc' else 'giải mã' }}</h2>
+  <div class="flow-h">
+    {% for label, val in sdes.flow %}
+    <div class="step {{ 'io' if loop.first or loop.last }} {{ 'r' ~ label[-1] if label.startswith('Vòng') }}">
+      <small>{{ label }}</small><b class="mono">{{ val[:4] }} {{ val[4:] }}</b>
+    </div>
+    {% if not loop.last %}<span class="arrow">→</span>{% endif %}
+    {% endfor %}
+  </div>
+  <dl class="kv">
+    <dt>Nhị phân</dt><dd class="mono">{{ sdes.out_bin }}</dd>
+    <dt>Hex</dt><dd class="mono">{{ sdes.out_hex }}</dd>
+    {% if sdes.out_text is not none %}<dt>Văn bản</dt><dd>{{ sdes.out_text }}</dd>{% endif %}
+  </dl>
+  {% if sdes.roundtrip %}
+  <div class="roundtrip {{ 'ok' if sdes.roundtrip.ok else 'bad' }}">
+    {{ 'Đúng:' if sdes.roundtrip.ok else 'Sai:' }} Giải mã ngược lại:
+    <span class="mono">{{ sdes.roundtrip.text if sdes.roundtrip.text is not none else sdes.roundtrip.bin }}</span>
+    — {{ 'khớp bản rõ ban đầu' if sdes.roundtrip.ok else 'KHÔNG khớp bản rõ' }}
+  </div>
+  <a class="btn small danger" href="{{ url_for('bruteforce_page', bf_fmt=sdes.fmt, bf_plain=form.get('sdes_input', ''),
+      bf_cipher=sdes.out_bin if sdes.fmt == 'bin' else sdes.out_hex) }}">Dùng cặp bản rõ / bản mã này để bẻ khóa →</a>
+  {% endif %}
+</div>
+
+<!-- ===================== THANH ĐIỀU KHIỂN MINH HỌA ===================== -->
+{# Tab chọn khối + nút trình chiếu (các id được present.js gắn sự kiện) #}
+<div class="card present-bar" id="present-bar">
+  <div>
+    <h2 class="card-title">Các bước trung gian</h2>
+    {% if sdes.traces|length > 1 %}
+    <div class="tabs" id="block-tabs">
+      {% for t in sdes.traces %}
+      <button type="button" class="tab {{ 'active' if loop.first }}" data-block="{{ loop.index0 }}">
+        Khối {{ loop.index }} <span class="mono">{{ t.input }}</span>
+      </button>
+      {% endfor %}
+      {% if sdes.total_blocks > sdes.traces|length %}<span class="hint">(hiển thị {{ sdes.traces|length }}/{{ sdes.total_blocks }} khối đầu)</span>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+  <div class="present-ctrl">
+    <button type="button" class="btn" id="btn-present">Trình chiếu từng bước</button>
+    <button type="button" class="btn primary" id="btn-next" hidden>Bước tiếp →</button>
+    <button type="button" class="btn" id="btn-all" hidden>Hiện tất cả</button>
+    <span class="hint" id="step-count"></span>
+  </div>
+  <div class="legend">
+    <span><i class="bit-demo b1"></i> bit 1</span>
+    <span><i class="bit-demo b0"></i> bit 0</span>
+    <span><small class="mono">←b2</small> lấy từ bit b2 của dãy trước (hoán vị / mở rộng / nén)</span>
+  </div>
+</div>
+
+{# Mỗi khối có 1 div.trace riêng, chỉ khối đầu hiện. t = kết quả trace() trong tinydes_core.py #}
+{% for t in sdes.traces %}
+<div class="trace" data-block="{{ loop.index0 }}" {% if not loop.first %}hidden{% endif %}>
+
+  <!-- ---------- BƯỚC 1: SINH KHÓA ---------- -->
+  <div class="key-grid">
+    <div class="card">
+      <h2 class="card-title"><span class="num">1</span> Sinh khóa con K1, K2, K3</h2>
+      {% for s in t.key_steps %}
+        {% call step(s.name, s.desc) %}{{ bitrow(s.cells, s.split or 0, 'keybits' if s.key else '') }}{% endcall %}
+      {% endfor %}
+    </div>
+    <div class="card">
+      <h2 class="card-title">Các hàm của TinyDES</h2>
+      <table class="perm-tables">
+        <tr><th>Expand</th><td class="mono">b2 b3 b1 b2 b1 b0 (4 → 6)</td></tr>
+        <tr><th>S-box</th><td class="mono">hàng b0b5, cột b1b2b3b4 (6 → 4)</td></tr>
+        <tr><th>P-box</th><td class="mono">b2 b0 b3 b1</td></tr>
+        <tr><th>Compress</th><td class="mono">k5 k1 k3 k2 k7 k0 (8 → 6)</td></tr>
+        <tr><th>Dịch</th><td class="mono">vòng 1: 1 · vòng 2: 2 · vòng 3: 1</td></tr>
+      </table>
+      <div class="keys">
+        {% for k in t.subkeys %}<div class="key-chip">K{{ loop.index }} = <b class="mono">{{ k }}</b></div>{% endfor %}
+      </div>
+      <p class="hint">{{ 'Giải mã đi ngược vòng 3 → 1, dùng K3, K2, K1.' if t.decrypt else 'Mã hóa dùng K1, K2, K3 ở vòng 1, 2, 3.' }}</p>
+    </div>
+  </div>
+
+  <!-- ---------- BƯỚC 2: ĐẦU VÀO ---------- -->
+  <div class="card">
+    <h2 class="card-title"><span class="num">2</span> Đầu vào: chia đôi</h2>
+    {% call step('L3 | R3' if t.decrypt else 'L0 | R0', 'Bản mã' if t.decrypt else 'Bản rõ') %}{{ bitrow(t.input, 4) }}{% endcall %}
+  </div>
+
+  <!-- ---------- BƯỚC 3-5: BA VÒNG FEISTEL ---------- -->
+{# Mã hóa: L_i = R_(i-1), R_i = L_(i-1) ⊕ F(R_(i-1), K_i). Giải mã: ngược lại, F tính trên L. #}
+  {% for r in t.rounds %}
+  <div class="card round r{{ r.n }}">
+    <h2 class="card-title"><span class="num">{{ loop.index + 2 }}</span>
+      <span>Vòng {{ r.n }} — khóa K{{ r.n }} = <span class="mono">{{ r.k }}</span></span></h2>
+    {% call step('L | R', 'Đầu vào vòng') %}{{ bitrow(r.input, 4) }}{% endcall %}
+    {% call step('Expand(' ~ r.f_name ~ ')', r.f_name ~ ' = ' ~ r.f_in ~ ' → b2 b3 b1 b2 b1 b0') %}{{ bitrow(r.expand_cells) }}{% endcall %}
+    {% call step('⊕ K' ~ r.n, 'XOR với khóa con 6 bit') %}{{ bitrow(r.k, 0, 'keybits') }}{% endcall %}
+    {% call step('= ', 'Đầu vào S-box') %}{{ bitrow(r.xor, 0, 'res') }}{% endcall %}
+    {% call step('S-box', 'hàng b0b5 = ' ~ r.sbox.in[0] ~ r.sbox.in[5] ~ ' = ' ~ r.sbox.row ~ ', cột b1b2b3b4 = ' ~ r.sbox.in[1:5] ~ ' = ' ~ r.sbox.col) %}{{ bitrow(r.sbox.out) }}{% endcall %}
+    <div class="sl sbox-step step-unit">{{ sbox_table(sbox, r.sbox, 'hit-r' ~ r.n) }}</div>
+    {% call step('P-box = F', 'b2 b0 b3 b1') %}{{ bitrow(r.f_cells) }}{% endcall %}
+    {% call step(r.mix_name ~ ' ⊕ F', r.mix ~ ' ⊕ ' ~ r.f) %}{{ bitrow(r.mixed, 0, 'res') }}{% endcall %}
+    {% if t.decrypt %}
+      {% call step('L' ~ (r.n - 1) ~ ' | R' ~ (r.n - 1), 'R' ~ (r.n - 1) ~ ' = L' ~ r.n ~ ',  L' ~ (r.n - 1) ~ ' = R' ~ r.n ~ ' ⊕ F') %}{{ bitrow(r.output, 4, 'out') }}{% endcall %}
+    {% else %}
+      {% call step('L' ~ r.n ~ ' | R' ~ r.n, 'L' ~ r.n ~ ' = R' ~ (r.n - 1) ~ ',  R' ~ r.n ~ ' = L' ~ (r.n - 1) ~ ' ⊕ F') %}{{ bitrow(r.output, 4, 'out') }}{% endcall %}
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <div class="card result">
+    <h2 class="card-title"><span class="num">6</span> {{ 'Bản rõ P = L0 R0' if t.decrypt else 'Bản mã C = L3 R3' }}</h2>
+    {% call step('Kết quả', 'TinyDES không có hoán vị khởi tạo / kết thúc') %}{{ bitrow(t.output, 0, 'out') }}{% endcall %}
+  </div>
+</div>
+{% endfor %}
+
+<!-- ===================== LOG DẠNG BẢNG ===================== -->
+{# Log trung gian của encrypt() / decrypt(), thu gọn sẵn #}
+<div class="card">
+  <h2 class="card-title">Log thanh ghi dạng bảng</h2>
+  {% for b in sdes.blocks %}
+  <details>
+    <summary>Khối {{ loop.index }}: <span class="mono">{{ b.input }}</span> → <span class="mono">{{ b.output }}</span></summary>
+    <table class="log">
+      <tr><th>Bước</th><th>Giá trị</th><th>Ghi chú</th></tr>
+      {% for s in sdes.key_log %}
+      <tr class="{{ 'keyrow' if s.buoc.startswith('K') and s.buoc|length == 2 }}"><td>{{ s.buoc }}</td><td class="mono">{{ s.gia_tri }}</td><td>{{ s.ghi_chu }}</td></tr>
+      {% endfor %}
+      {% for s in b.steps %}
+      <tr class="{% if s.buoc.startswith('Vòng') %}r{{ s.buoc[5] }}{% elif s.buoc in ['Bản rõ', 'Bản mã'] %}io{% endif %}">
+        <td>{{ s.buoc }}</td><td class="mono">{{ s.gia_tri }}</td><td>{{ s.ghi_chu }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </details>
+  {% endfor %}
+</div>
+
+<script src="{{ url_for('static', filename='present.js') }}"></script>
+{% endif %}
+{% endblock %}
