@@ -1,0 +1,273 @@
+{# bruteforce.html: trang tấn công TinyDES (/bruteforce), do bruteforce_page() và các hàm sdes_bruteforce*, sdes_chosen_plaintext, sdes_mitm render. Mỗi kịch bản nhận 1 biến kết quả (co, bf, cp, mm) và 1 biến lỗi (co_error, bf_error, cp_error, mm_error). #}
+{% extends "base.html" %}
+{% set active = 'bruteforce_page' %}
+{% block title %}Tấn công TinyDES{% endblock %}
+{% block heading %}Tấn công TinyDES{% endblock %}
+{% block subtitle %}4 kiểu tấn công: chỉ biết bản mã, biết trước 1 cặp bản rõ / bản mã, chọn bản rõ, và gặp nhau ở giữa với TinyDES 2 lớp{% endblock %}
+
+{% block content %}
+{# Kịch bản 1: chỉ có bản mã, thử 256 khóa rồi chấm điểm bản giải mã #}
+<h2 class="section-title">Kịch bản 1: kẻ xấu chỉ chặn được bản mã</h2>
+<div class="two-col wide-left">
+  <div class="card accent">
+    <h2 class="card-title">An (người gửi) <small>mã hóa tin bí mật gửi Bình bằng TinyDES</small></h2>
+    <form method="post" action="{{ url_for('sdes_bruteforce_cipher') }}" class="form-grid">
+      <label class="wide">Thông điệp bí mật
+        <input name="co_message" required value="{{ form.get('co_message', 'Hẹn gặp ở cổng trường lúc 8h tối') }}">
+      </label>
+      <label class="wide">Khóa bí mật (8 bit) <small class="hint">— chỉ An và Bình biết</small>
+        <input name="co_key" required class="mono" maxlength="8" value="{{ form.get('co_key', '11011010') }}">
+      </label>
+      <div class="actions wide">
+        <button class="btn danger">Gửi đi → kẻ xấu chặn và bẻ khóa</button>
+      </div>
+    </form>
+    {% if co_error %}<p class="error">{{ co_error }}</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2 class="card-title">Kẻ xấu làm gì?</h2>
+    <ol class="clean steps">
+      <li>Chỉ có <b>bản mã</b>, không biết bản rõ, không biết khóa.</li>
+      <li>Lặp <span class="mono">k = 0 … 255</span>, <b>giải mã thử</b> bản mã bằng từng khóa.</li>
+      <li><b>Chấm điểm</b> mỗi bản giải mã: đọc được UTF-8, nhiều chữ cái, khoảng trắng → điểm cao; ký tự rác → điểm thấp.</li>
+      <li>Khóa có điểm <b>cao nhất</b> là khóa đoán được.</li>
+    </ol>
+    <p class="hint">Thông điệp quá ngắn (VD “Hi”) thì nhiều khóa cho ra chữ trông “đọc được” → có thể đoán sai.
+      Thông điệp càng dài, càng chắc chắn tìm đúng khóa.</p>
+  </div>
+</div>
+
+{# Kết quả kịch bản 1: diễn biến 4 bước + top 5 ứng viên (dòng trùng khóa thật tô xanh) #}
+{% if co %}
+<div class="card result">
+  <h2 class="card-title">Diễn biến</h2>
+  <ol class="clean steps">
+    <li><b>An</b> mã hóa “{{ co.message }}” bằng khóa <span class="mono">{{ co.secret }}</span>.</li>
+    <li><b>Kẻ xấu</b> chặn được bản mã ({{ co.n_bytes }} byte):
+      <div class="mono">{{ co.cipher_hex }}</div></li>
+    <li>Thử {{ co.tried }} khóa trong <b>{{ co.elapsed }} ms</b> → khóa điểm cao nhất:
+      <b class="mono">{{ co.guess.key }}</b>, giải mã ra “{{ co.guess.text }}”.</li>
+    <li>So với khóa thật:
+      {% if co.success %}<span class="chip bad">Kẻ xấu đã tìm ra khóa — tin của An bị lộ</span>
+      {% else %}<span class="chip ok">Đoán sai khóa — thông điệp quá ngắn để nhận ra bản rõ</span>{% endif %}</li>
+  </ol>
+
+  <div class="stats big">
+    <div><span>Số khóa đã thử</span><b>{{ co.tried }}</b></div>
+    <div><span>Thời gian</span><b>{{ co.elapsed }} ms</b></div>
+    <div class="{{ 'badbox' if co.success else 'good' }}"><span>Khóa đoán được</span><b class="mono">{{ co.guess.key }}</b></div>
+  </div>
+
+  <h3>Top 5 ứng viên (xếp theo điểm “đọc được”)</h3>
+  <div class="scroll">
+    <table class="log small">
+      <tr><th>Hạng</th><th>Khóa</th><th>K1 K2 K3</th><th>Điểm</th><th>Bản giải mã thử</th></tr>
+      {% for c in co.top %}
+      <tr class="{{ 'io' if c.key == co.secret }}">
+        <td>{{ loop.index }}</td>
+        <td class="mono">{{ c.key }}{% if c.key == co.secret %} khóa thật{% endif %}</td>
+        <td class="mono">{{ c.subkeys|join(' ') }}</td>
+        <td>{{ c.score }}</td>
+        <td class="breakall">{{ c.text }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# Kịch bản 2: biết 1 cặp (bản rõ, bản mã). Dữ liệu có thể được điền sẵn từ trang TinyDES qua URL. #}
+<h2 class="section-title">Kịch bản 2: biết trước một cặp bản rõ / bản mã</h2>
+<div class="two-col wide-left">
+  <div class="card accent">
+    <h2 class="card-title">Dữ liệu tấn công</h2>
+    <form method="post" action="{{ url_for('sdes_bruteforce') }}" class="form-grid">
+      <label class="wide">Dạng dữ liệu
+        <select name="bf_fmt">
+          <option value="text" {% if form.get('bf_fmt', 'text') == 'text' %}selected{% endif %}>Văn bản + bản mã hex</option>
+          <option value="bin" {% if form.get('bf_fmt') == 'bin' %}selected{% endif %}>Nhị phân</option>
+        </select>
+      </label>
+      <label class="wide">Bản rõ đã biết
+        <input name="bf_plain" required class="mono" value="{{ form.get('bf_plain', '') }}" placeholder="Hello">
+      </label>
+      <label class="wide">Bản mã chặn được
+        <input name="bf_cipher" required class="mono" value="{{ form.get('bf_cipher', '') }}" placeholder="67 B3 20 20 A2">
+      </label>
+      <div class="actions wide">
+        <button class="btn danger">Bẻ khóa TinyDES</button>
+      </div>
+    </form>
+    {% if bf_error %}<p class="error">{{ bf_error }}</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2 class="card-title">Cách hoạt động</h2>
+    <ol class="clean steps">
+      <li>Kẻ xấu biết một cặp (bản rõ, bản mã), ví dụ đoán được An hay mở đầu bằng “Hello”.</li>
+      <li>Lặp <span class="mono">k = 0 … 255</span>, sinh K1, K2, K3 từ khóa <span class="mono">k</span>.</li>
+      <li>Mã hóa bản rõ bằng <span class="mono">k</span>, so với bản mã chặn được.</li>
+      <li>Giữ lại các khóa khớp → khóa thật nằm trong đó.</li>
+    </ol>
+    <p class="hint">Thử nhanh: mã hóa “Hello” với khóa <span class="mono">10011010</span> ở trang
+      <a href="{{ url_for('sdes_page') }}">TinyDES Demo</a> rồi bấm nút chuyển sang đây.</p>
+  </div>
+</div>
+
+{# Kết quả kịch bản 2: bf.found|length = số khóa khớp (bộ lọc giống len() của Python) #}
+{% if bf %}
+<div class="card result">
+  <div class="stats big">
+    <div><span>Số khóa đã thử</span><b>{{ bf.tried }}</b></div>
+    <div><span>Thời gian</span><b>{{ bf.elapsed }} ms</b></div>
+    <div class="{{ 'good' if bf.found else 'badbox' }}"><span>Khóa khớp</span><b>{{ bf.found|length }}</b></div>
+  </div>
+  {% if bf.found %}
+  <div class="found-list">
+    {% for f in bf.found %}
+    <div class="found">
+      <small>Khóa tìm được</small>
+      <b class="mono">{{ f.key }}</b>
+      <span>= {{ f.dec }} · K1 K2 K3 = <span class="mono">{{ f.subkeys|join(' ') }}</span></span>
+    </div>
+    {% endfor %}
+  </div>
+  {% if bf.found|length > 1 %}
+  <p class="hint">Có nhiều khóa khớp vì bản rõ ngắn ({{ bf.n_bytes }} byte) — dùng bản rõ dài hơn để thu hẹp còn 1 khóa.</p>
+  {% endif %}
+  {% else %}
+  <p class="error">Không tìm thấy khóa nào khớp.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{# Kịch bản 3: chọn bản rõ, mượn hộp đen mã hóa để lập bảng tra 256 dòng rồi tra bảng, không cần tìm khóa #}
+<h2 class="section-title">Kịch bản 3: tấn công chọn bản rõ (chosen-plaintext)</h2>
+<div class="two-col wide-left">
+  <div class="card accent">
+    <h2 class="card-title">An (người gửi) <small>hộp đen mã hóa chứa khóa này, kẻ xấu không xem được</small></h2>
+    <form method="post" action="{{ url_for('sdes_chosen_plaintext') }}" class="form-grid">
+      <label class="wide">Thông điệp bí mật
+        <input name="cp_message" required value="{{ form.get('cp_message', 'Hẹn gặp ở cổng trường lúc 8h tối') }}">
+      </label>
+      <label class="wide">Khóa bí mật (8 bit) <small class="hint">nằm trong hộp đen</small>
+        <input name="cp_key" required class="mono" maxlength="8" value="{{ form.get('cp_key', '10101100') }}">
+      </label>
+      <div class="actions wide">
+        <button class="btn danger">Kẻ xấu mượn hộp đen và lập bảng tra</button>
+      </div>
+    </form>
+    {% if cp_error %}<p class="error">{{ cp_error }}</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2 class="card-title">Kẻ xấu làm gì?</h2>
+    <ol class="clean steps">
+      <li>Chặn được bản mã của An. Không biết khóa.</li>
+      <li>Mượn được <b>hộp đen</b> mã hóa của An (ví dụ máy An để quên): gõ bản rõ vào thì ra bản mã, nhưng không xem được khóa.</li>
+      <li>Đưa lần lượt <b>256 bản rõ</b> <span class="mono">00000000 … 11111111</span> vào hộp đen, ghi lại bảng 256 dòng <i>bản mã → bản rõ</i>.</li>
+      <li>Tra bảng từng byte của bản mã chặn được → đọc được tin. <b>Không cần biết khóa.</b></li>
+    </ol>
+    <p class="hint">Làm được vì khối TinyDES chỉ 8 bit nên chỉ có 256 bản rõ khác nhau. DES có khối 64 bit, bảng tra cần 2<sup>64</sup> dòng, không thể lập.</p>
+  </div>
+</div>
+
+{% if cp %}
+<div class="card result">
+  <h2 class="card-title">Diễn biến</h2>
+  <ol class="clean steps">
+    <li><b>An</b> mã hóa “{{ cp.message }}” bằng khóa <span class="mono">{{ cp.secret }}</span>.</li>
+    <li><b>Kẻ xấu</b> chặn được bản mã ({{ cp.n_bytes }} byte):
+      <div class="mono breakall">{{ cp.cipher_hex }}</div></li>
+    <li>Gọi hộp đen <b>{{ cp.calls }}</b> lần → bảng tra <b>{{ cp.rows }}</b> dòng, mất <b>{{ cp.elapsed }} ms</b>.</li>
+    <li>Tra bảng từng byte:
+      <div class="mono breakall">{% for l in cp.lookups %}{{ l.c }}→{{ l.p }} {% endfor %}{% if cp.n_bytes > cp.lookups|length %}…{% endif %}</div>
+      Kẻ xấu đọc được: <b>“{{ cp.text }}”</b>
+      {% if cp.success %}<span class="chip bad">Trùng tin gốc, tin của An bị lộ mà không cần tìm khóa</span>{% endif %}</li>
+  </ol>
+
+  <div class="stats big">
+    <div><span>Số lần gọi hộp đen</span><b>{{ cp.calls }}</b></div>
+    <div><span>Số dòng bảng tra</span><b>{{ cp.rows }}</b></div>
+    <div><span>Thời gian</span><b>{{ cp.elapsed }} ms</b></div>
+  </div>
+
+  <h3>Bảng tra kẻ xấu lập được (hex)</h3>
+  <p class="hint">Hàng = 4 bit đầu của bản rõ, cột = 4 bit cuối. Ô = bản mã hộp đen trả ra.
+    Ví dụ hàng 4, cột 8: bản rõ <span class="mono">48</span> (chữ “H”). Ô tô màu là byte có trong bản mã chặn được.</p>
+  <div class="scroll">
+    <table class="log small mono codebook">
+      <tr><th></th>{% for c in range(16) %}<th>{{ '%X' % c }}</th>{% endfor %}</tr>
+      {% for row in cp.grid %}
+      <tr><th>{{ '%X' % loop.index0 }}</th>
+        {% for v in row %}<td class="{{ 'io' if v in cp.used }}">{{ v }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# Kịch bản 4: gặp nhau ở giữa với TinyDES 2 lớp, chỉ cần 256 + 256 lần chạy thay vì 256 x 256 #}
+<h2 class="section-title">Kịch bản 4: gặp nhau ở giữa (meet-in-the-middle) với TinyDES 2 lớp</h2>
+<div class="two-col wide-left">
+  <div class="card accent">
+    <h2 class="card-title">An mã hóa 2 lớp <small>C = E<sub>K2</sub>(E<sub>K1</sub>(P)), khóa ghép 16 bit</small></h2>
+    <form method="post" action="{{ url_for('sdes_mitm') }}" class="form-grid">
+      <label class="wide">Tin cũ kẻ xấu đã biết <small class="hint">VD lời chào An hay gửi</small>
+        <input name="mm_known" required value="{{ form.get('mm_known', 'Chào Bình') }}">
+      </label>
+      <label class="wide">Tin bí mật gửi sau đó
+        <input name="mm_secret" required value="{{ form.get('mm_secret', 'Hẹn gặp ở cổng trường lúc 8h tối') }}">
+      </label>
+      <label>Khóa lớp 1 (K1)
+        <input name="mm_k1" required class="mono" maxlength="8" value="{{ form.get('mm_k1', '11011010') }}">
+      </label>
+      <label>Khóa lớp 2 (K2)
+        <input name="mm_k2" required class="mono" maxlength="8" value="{{ form.get('mm_k2', '01100101') }}">
+      </label>
+      <div class="actions wide">
+        <button class="btn danger">Kẻ xấu gặp nhau ở giữa</button>
+      </div>
+    </form>
+    {% if mm_error %}<p class="error">{{ mm_error }}</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <h2 class="card-title">Kẻ xấu làm gì?</h2>
+    <ol class="clean steps">
+      <li>An nghĩ: mã 2 lần, khóa 16 bit thì kẻ xấu phải thử 256 × 256 = <b>65.536</b> cặp khóa.</li>
+      <li>Kẻ xấu biết 1 tin cũ và bản mã của nó.</li>
+      <li><b>Đi xuôi:</b> mã hóa tin cũ bằng 256 khóa K1, ghi lại 256 giá trị “ở giữa”.</li>
+      <li><b>Đi ngược:</b> giải mã bản mã bằng 256 khóa K2. Giá trị nào <b>trùng</b> với bảng đi xuôi thì cặp (K1, K2) đó là khóa.</li>
+      <li>Chỉ cần <b>256 + 256 = 512</b> lần chạy. Có khóa rồi thì đọc được mọi tin sau.</li>
+    </ol>
+    <p class="hint">Đây là lý do Double DES (slide 82) chỉ mạnh cỡ 2<sup>57</sup> chứ không phải 2<sup>112</sup>, nên người ta dùng Triple DES.</p>
+  </div>
+</div>
+
+{% if mm %}
+<div class="card result">
+  <h2 class="card-title">Diễn biến</h2>
+  <ol class="clean steps">
+    <li><b>An</b> mã hóa 2 lớp bằng K1 = <span class="mono">{{ mm.k1 }}</span>, K2 = <span class="mono">{{ mm.k2 }}</span>.
+      Tin cũ “{{ mm.known }}” thành:
+      <div class="mono breakall">{{ mm.known_hex }}</div></li>
+    <li><b>Kẻ xấu</b> mã hóa xuôi bằng 256 khóa K1 → bảng {{ mm.n_middle }} giá trị ở giữa; giải mã ngược bằng 256 khóa K2 rồi so bảng.
+      Tổng <b>{{ mm.runs }}</b> lần chạy, mất <b>{{ mm.elapsed }} ms</b>.</li>
+    <li>Cặp khóa trùng ở giữa ({{ mm.n_pairs }}):
+      {% for p in mm.pairs %}<span class="mono">K1 = {{ p[0] }}, K2 = {{ p[1] }}</span>{% if p[0] == mm.k1 and p[1] == mm.k2 %} <span class="chip bad">đúng khóa thật</span>{% endif %}{% if not loop.last %}; {% endif %}{% endfor %}
+      {% if not mm.pairs %}không có{% endif %}</li>
+    <li>Tin bí mật bị chặn:
+      <div class="mono breakall">{{ mm.secret_hex }}</div>
+      {% if mm.read is not none %}Kẻ xấu giải mã bằng cặp khóa tìm được: <b>“{{ mm.read }}”</b>{% endif %}</li>
+  </ol>
+  <div class="stats big">
+    <div class="badbox"><span>Gặp nhau ở giữa</span><b>{{ mm.runs }} lần</b><small>{{ mm.elapsed }} ms</small></div>
+    <div><span>Vét cạn thường</span><b>{{ '{:,}'.format(mm.naive_runs).replace(',', '.') }} cặp</b><small>ước tính {{ mm.naive_ms }} ms</small></div>
+    <div><span>Nhanh hơn</span><b>khoảng {{ mm.speedup }} lần</b></div>
+  </div>
+  {% if mm.n_pairs > 1 %}<p class="hint">Có nhiều cặp khóa khớp vì tin cũ ngắn. Dùng tin cũ dài hơn để chỉ còn 1 cặp.</p>{% endif %}
+</div>
+{% endif %}
+{% endblock %}
