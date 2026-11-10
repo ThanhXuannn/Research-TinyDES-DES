@@ -1,0 +1,51 @@
+{# benchmark.html: trang đo thời gian (/benchmark), do benchmark_page() / benchmark() render. Nhận: bench = 4 dòng (1 KB, 10 KB, 100 KB, 1 MB), mỗi dòng có des_enc, des_dec, lib, sdes (ms), speed (KB/s), bar (% độ dài thanh). #}
+{% extends "base.html" %}
+{% set active = 'benchmark_page' %}
+{% block title %}Đo thời gian{% endblock %}
+{% block heading %}Đo thời gian theo kích thước dữ liệu{% endblock %}
+{% block subtitle %}DES tự cài đặt so với thư viện pycryptodome (viết bằng C) và TinyDES{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="bench-head">
+    <p>Sinh dữ liệu ngẫu nhiên <b>1 KB, 10 KB, 100 KB, 1 MB</b>, đo thời gian mã hóa và giải mã.
+      TinyDES (bản minh họa dùng chuỗi bit) chỉ đo tới 100 KB. Mất khoảng 5 giây.</p>
+    <form method="post" action="{{ url_for('benchmark') }}">
+      <button class="btn primary">Chạy đo thời gian</button>
+    </form>
+  </div>
+</div>
+
+{# Bảng kết quả: thanh màu dài theo % so với dòng lâu nhất, bench[-1] (dòng 1 MB) dùng cho 3 ô tóm tắt bên dưới #}
+{% if bench %}
+<div class="card result">
+  <h2 class="card-title">Kết quả</h2>
+  <div class="scroll">
+  <table class="log">
+    <tr><th>Kích thước</th><th>DES mã hóa</th><th>DES giải mã</th><th>Tốc độ</th>
+        <th>pycryptodome</th><th>TinyDES</th><th style="width:28%">DES mã hóa (tương đối)</th></tr>
+    {% for r in bench %}
+    <tr>
+      <td><b>{{ r.label }}</b></td>
+      <td>{{ '%.1f'|format(r.des_enc) }} ms</td>
+      <td>{{ '%.1f'|format(r.des_dec) }} ms</td>
+      <td>{{ '%.0f'|format(r.speed) }} KB/s</td>
+      <td>{{ '%.2f'|format(r.lib) }} ms</td>
+      <td>{{ '%.1f ms'|format(r.sdes) if r.sdes is not none else '—' }}</td>
+      <td><div class="bar-track"><div class="bar" style="width: {{ '%.1f'|format(r.bar) }}%"></div></div></td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+<div class="three-col">
+  <div class="card mini"><span>Tốc độ DES tự code</span><b>{{ '%.0f'|format(bench[-1].speed) }} KB/s</b></div>
+  <div class="card mini"><span>pycryptodome nhanh hơn</span><b>≈ {{ '%.0f'|format(bench[-1].des_enc / bench[-1].lib) }}×</b></div>
+  <div class="card mini"><span>Độ phức tạp</span><b>O(n)</b></div>
+</div>
+<p class="hint">Nhận xét: thời gian tăng gần tuyến tính theo số khối 8 byte. Thư viện nhanh hơn vì được cài bằng C,
+  còn bản của nhóm viết bằng Python thuần (đã tối ưu bằng bảng tra S-box + P).</p>
+{% else %}
+<div class="card"><div class="empty">Bấm <b>Chạy đo thời gian</b> để xem bảng kết quả.</div></div>
+{% endif %}
+{% endblock %}
