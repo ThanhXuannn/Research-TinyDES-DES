@@ -1,0 +1,46 @@
+{# base.html: khung chung (menu trái, tiêu đề, chân trang). Trang con dùng {% extends "base.html" %} rồi điền các block. #}
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %} · DES &amp; TinyDES</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{# Menu: (tên hàm trong app.py, chữ hiển thị). Mục '-' là tiêu đề nhóm. Thêm trang mới thì thêm 1 dòng. #}
+{% set menu = [
+  ('-', 'Bắt đầu'),
+  ('index', 'Trang chủ'),
+  ('guide', 'Hướng dẫn'),
+  ('chat', 'Demo: An gửi Bình'),
+  ('-', 'Thuật toán'),
+  ('sdes_page', 'TinyDES từng bước'),
+  ('des_page', 'DES: văn bản & tệp'),
+  ('code_guide', 'Đọc code cùng thuật toán'),
+  ('-', 'Tấn công & kiểm chứng'),
+  ('bruteforce_page', 'Tấn công TinyDES'),
+  ('benchmark_page', 'Đo thời gian'),
+  ('tests_page', 'Kiểm thử'),
+  ('history', 'Lịch sử'),
+] %}
+<aside class="sidebar">
+  <a class="brand" href="{{ url_for('index') }}">
+    <span><b>Mật thư An–Bình</b><small>Đồ án DES &amp; TinyDES</small></span>
+  </a>
+  <nav>
+{# Mục trùng biến `active` của trang con sẽ được tô sáng #}
+    {% for item in menu %}
+      {% if item[0] == '-' %}
+    <span class="nav-group">{{ item[1] }}</span>
+      {% else %}
+    <a href="{{ url_for(item[0]) }}" class="{{ 'active' if active == item[0] }}">
+      {{ item[1] }}
+    </a>
+      {% endif %}
+    {% endfor %}
+  </nav>
+  <div class="side-foot">
+    <span class="who
