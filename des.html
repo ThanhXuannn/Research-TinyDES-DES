@@ -1,0 +1,111 @@
+{# des.html: trang DES (/des), do des_page() / des_file() render. Nhận: des (kết quả), des_error (thông báo lỗi). #}
+{% extends "base.html" %}
+{% set active = 'des_page' %}
+{% block title %}DES File{% endblock %}
+{% block heading %}Phòng thủ bằng DES: mã hóa văn bản &amp; tệp{% endblock %}
+{% block subtitle %}An mã hóa tin, ảnh, tệp bất kỳ bằng DES (khóa 56 bit, 16 vòng). Bình giải mã bằng cùng khóa{% endblock %}
+
+{% block content %}
+<div class="card">
+{# Form cần enctype="multipart/form-data" để gửi được tệp. Có tệp thì app.py ưu tiên tệp, không thì dùng văn bản. #}
+  <form method="post" action="{{ url_for('des_file') }}" enctype="multipart/form-data" class="form-grid">
+    <label>Khóa DES <small class="hint">(8 ký tự hoặc 16 ký tự hex)</small>
+      <input name="des_key" required class="mono" value="{{ form.get('des_key', '133457799BBCDFF1') }}" placeholder="133457799BBCDFF1">
+    </label>
+    <label>Tệp (ảnh / txt / bất kỳ)
+      <input type="file" name="des_file" class="file">
+    </label>
+    <label class="wide">Hoặc nhập văn bản <small class="hint">(khi giải mã: nhập hex)</small>
+      <textarea name="des_text" rows="3" placeholder="Xin chào DES!">{{ form.get('des_text', '') }}</textarea>
+    </label>
+    <div class="actions wide">
+      <button name="des_action" value="enc" class="btn primary">Mã hóa</button>
+      <button name="des_action" value="dec" class="btn">Giải mã</button>
+    </div>
+  </form>
+  {% if des_error %}<p class="error">{{ des_error }}</p>{% endif %}
+</div>
+
+{# Kết quả: số liệu, bản mã / bản rõ, kiểm tra giải mã ngược, nút tải về. "is defined" = chỉ hiện khi app.py có gửi biến. #}
+{% if des %}
+<div class="card result">
+  <h2 class="card-title">Kết quả {{ 'mã hóa' if des.action == 'enc' else 'giải mã' }}: {{ des.name }}</h2>
+  <div class="stats">
+    <div><span>Đầu vào</span><b>{{ des.in_size }} B</b></div>
+    <div><span>Đầu ra</span><b>{{ des.out_size }} B</b></div>
+    <div><span>Số khối 8 byte</span><b>{{ des.blocks }}</b></div>
+    <div><span>Thời gian</span><b>{{ des.elapsed }} ms</b></div>
+  </div>
+  {% if des.out_text is not none %}
+  <dl class="kv"><dt>{{ 'Bản mã (hex)' if des.action == 'enc' else 'Bản rõ' }}</dt>
+    <dd class="mono breakall">{{ des.out_text }}</dd></dl>
+  {% else %}
+  <dl class="kv"><dt>128 byte đầu (hex)</dt><dd class="mono breakall">{{ des.preview_hex }}</dd></dl>
+  {% endif %}
+  {% if des.roundtrip_ok is defined %}
+  <div class="roundtrip {{ 'ok' if des.roundtrip_ok else 'bad' }}">
+    {{ 'Đúng:' if des.roundtrip_ok else 'Sai:' }} Giải mã ngược lại bản mã vừa tạo
+    {% if des.roundtrip_text is defined %}: <b>{{ des.roundtrip_text }}</b>{% endif %}
+    — {{ 'khớp 100% dữ liệu gốc (' ~ des.in_size ~ ' byte)' if des.roundtrip_ok else 'KHÔNG khớp' }}
+  </div>
+  {% endif %}
+  <a class="btn primary" href="{{ url_for('download', token=des.token) }}">Tải về {{ des.out_name }}</a>
+
+{# Nếu là ảnh: hiện ảnh gốc → bản mã → ảnh sau giải mã (nhúng bằng data URI) #}
+  {% if des.img_before or des.img_after %}
+  <div class="img-compare">
+    {% if des.img_before %}
+    <figure><img src="{{ des.img_before }}" alt="Ảnh gốc"><figcaption>① Ảnh gốc</figcaption></figure>
+    <span class="arrow">→</span>
+    <figure><div class="noise mono">{{ des.preview_hex }}</div><figcaption>② Bản mã (không mở được như ảnh)</figcaption></figure>
+    <span class="arrow">→</span>
+    {% endif %}
+    {% if des.img_after %}
+    <figure><img src="{{ des.img_after }}" alt="Ảnh sau giải mã"><figcaption>{{ '③' if des.img_before else '' }} Ảnh sau khi giải mã</figcaption></figure>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{# Trái: 16 khóa con. Phải: 16 vòng Feistel của khối đầu tiên #}
+<div class="two-col">
+  <div class="card">
+    <h2 class="card-title">16 khóa con <small class="mono">{{ des.key_hex }}</small></h2>
+    <div class="scroll">
+    <table class="log small">
+      <tr><th>Bước</th><th>C (28 bit)</th><th>D (28 bit)</th><th>Khóa con (48 bit)</th></tr>
+      {% for k in des.key_log %}
+      <tr class="{{ 'keyrow' if loop.first }}"><td>{{ k.vong }}</td><td class="mono">{{ k.c }}</td><td class="mono">{{ k.d }}</td><td class="mono">{{ k.k }}</td></tr>
+      {% endfor %}
+    </table>
+    </div>
+  </div>
+  <div class="card">
+    <h2 class="card-title">16 vòng Feistel <small class="mono">khối {{ des.first_in }}</small></h2>
+    <div class="scroll">
+    <table class="log small">
+      <tr><th>Vòng</th><th>E(R)⊕K</th><th>S-box</th><th>f</th><th>L</th><th>R</th></tr>
+      {% for r in des.round_log %}
+        {% if r.out %}
+        <tr class="io"><td>{{ r.vong }}</td><td colspan="5" class="mono">{{ r.out }}</td></tr>
+        {% elif r.vong == 'IP' %}
+        <tr class="io"><td>IP</td><td colspan="3"></td><td class="mono">{{ r.l }}</td><td class="mono">{{ r.r }}</td></tr>
+        {% else %}
+        <tr><td>{{ r.vong }}</td><td class="mono">{{ r.xor }}</td><td class="mono">{{ r.s }}</td>
+            <td class="mono">{{ r.f }}</td><td class="mono">{{ r.l }}</td><td class="mono">{{ r.r }}</td></tr>
+        {% endif %}
+      {% endfor %}
+    </table>
+    </div>
+  </div>
+</div>
+{# Chưa bấm nút thì hiện hướng dẫn #}
+{% else %}
+<div class="card">
+  <div class="empty">
+    Chọn một ảnh nhỏ (PNG/JPG) hoặc tệp .txt rồi bấm <b>Mã hóa</b>.<br>
+    Sau đó tải tệp <span class="mono">.enc</span> lên lại và bấm <b>Giải mã</b> để nhận lại tệp gốc.
+  </div>
+</div>
+{% endif %}
+{% endblock %}
