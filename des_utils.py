@@ -1,4 +1,9 @@
-from core import des_core
+try:
+    from core import des_core
+except ImportError:          # chạy trực tiếp file này (python core/des_utils.py)
+    import os, sys
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from core import des_core
 
 class DESHandler:
     """
@@ -82,6 +87,77 @@ class DESHandler:
         return True
 
 
+
+# =====================================================================
+# HÀM DÙNG CHO WEB (app.py): khóa DES, đệm PKCS#7, mã hóa bytes / file (chế độ ECB)
+# =====================================================================
+
+def parse_des_key(text):
+    """'133457799BBCDFF1' (16 hex) hoặc 'nhom2026' (8 ký tự) -> 8 byte khóa. Sai độ dài -> ValueError."""
+    text = text.strip()
+    if len(text) == 16:
+        try:
+            return bytes.fromhex(text)
+        except ValueError:
+            pass
+    raw = text.encode("utf-8")
+    if len(raw) == 8:
+        return raw
+    raise ValueError("Khóa DES phải là 8 ký tự hoặc 16 ký tự hex.")
+
+
+def pkcs7_pad(data, block_size=8):
+    """Thiếu n byte thì độn n byte, mỗi byte ghi số n (đủ rồi vẫn độn nguyên 1 khối)."""
+    n = block_size - len(data) % block_size
+    return data + bytes([n]) * n
+
+
+def pkcs7_unpad(data, block_size=8):
+    """Bỏ phần độn. Độn sai (thường do sai khóa) -> ValueError."""
+    n = data[-1] if data else 0
+    if n < 1 or n > block_size or data[-n:] != bytes([n]) * n:
+        raise ValueError("Padding sai - có thể do sai khóa hoặc file không phải bản mã DES.")
+    return data[:-n]
+
+
+def split_blocks(data, block_size=8):
+    return [data[i:i + block_size] for i in range(0, len(data), block_size)]
+
+
+def _crypt_blocks(data, subkeys):
+    out = bytearray()
+    fast = des_core.crypt_block_fast
+    for i in range(0, len(data), 8):
+        out += fast(int.from_bytes(data[i:i + 8], "big"), subkeys).to_bytes(8, "big")
+    return bytes(out)
+
+
+def des_encrypt_bytes(data, key):
+    """Đệm PKCS#7 rồi mã hóa mọi khối 8 byte (ECB)."""
+    return _crypt_blocks(pkcs7_pad(data), des_core.generate_subkeys(key))
+
+
+def des_decrypt_bytes(data, key):
+    """Giải mã mọi khối rồi bỏ đệm. Độ dài không chia hết 8 hoặc sai khóa -> ValueError."""
+    if not data or len(data) % 8:
+        raise ValueError("Bản mã phải có độ dài là bội số của 8 byte.")
+    return pkcs7_unpad(_crypt_blocks(data, des_core.generate_subkeys(key)[::-1]))
+
+
+def des_encrypt_file(src, dst, key):
+    with open(src, "rb") as f:
+        data = f.read()
+    with open(dst, "wb") as f:
+        f.write(des_encrypt_bytes(data, key))
+
+
+def des_decrypt_file(src, dst, key):
+    with open(src, "rb") as f:
+        data = f.read()
+    with open(dst, "wb") as f:
+        f.write(des_decrypt_bytes(data, key))
+
+
 # CHẠY THỬ
 
 if __name__ == "__main__":
@@ -112,3 +188,4 @@ if __name__ == "__main__":
     handler.process_file("test_input.txt", "test_encrypted.bin", KEY, mode="encrypt")
     handler.process_file("test_encrypted.bin", "test_decrypted.txt", KEY, mode="decrypt")
     print("Đã tạo file 'test_input.txt', mã hóa thành 'test_encrypted.bin', rồi giải mã ra 'test_decrypted.txt'.")
+
