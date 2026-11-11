@@ -1,0 +1,1012 @@
+
+
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Đọc code cùng thuật toán · DES &amp; TinyDES</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+
+
+<aside class="sidebar">
+
+  <a class="brand" href="index.html">
+    <span><b>Mật thư An–Bình</b><small>Đồ án DES &amp; TinyDES</small></span>
+  </a>
+  <nav>
+
+    
+      
+    <span class="nav-group">Bắt đầu</span>
+      
+    
+      
+    <a href="index.html" class="">
+      Trang chủ
+    </a>
+      
+    
+      
+    <a href="huong-dan.html" class="">
+      Hướng dẫn
+    </a>
+      
+    
+      
+    <a href="chat.html" class="">
+      Demo: An gửi Bình
+    </a>
+      
+    
+      
+    <span class="nav-group">Thuật toán</span>
+      
+    
+      
+    <a href="tinydes.html" class="">
+      TinyDES từng bước
+    </a>
+      
+    
+      
+    <a href="des.html" class="">
+      DES: văn bản &amp; tệp
+    </a>
+      
+    
+      
+    <a href="doc-code.html" class="active">
+      Đọc code cùng thuật toán
+    </a>
+      
+    
+      
+    <span class="nav-group">Bản đầy đủ</span>
+    <a href="ban-day-du.html" class="">Tấn công, kiểm thử, đo thời gian</a>
+      
+    
+  </nav>
+
+  <div class="side-foot">
+    <span class="who an">An · gửi</span>
+    <span class="who binh">Bình · nhận</span>
+    <span class="who eve">Kẻ xấu · chặn giữa</span>
+  </div>
+</aside>
+
+
+<div class="content">
+
+  <header class="page-head">
+    <div>
+      <h1>Đọc code cùng thuật toán</h1>
+      <p>Mỗi bước: slide nói gì → hiểu nôm na → đoạn code thật (kèm số dòng) → các biến đổi giá trị thế nào</p>
+    </div>
+
+    
+  </header>
+  <main>
+
+    
+<nav class="card toc">
+  <b>Nhảy tới:</b>
+  <a href="#cach-doc">Cách đọc</a>
+  <a href="#ban-do">Bản đồ file</a>
+  <a href="#t1">TinyDES 1–9</a>
+  <a href="#d1">DES 1–8</a>
+  <a href="#w1">Web 1–3</a>
+  <a href="#cu-phap">Cú pháp Python</a>
+</nav>
+
+
+<section class="card" id="cach-doc">
+  <h2 class="card-title">Đọc trang này thế nào?</h2>
+  <div class="legend-grid">
+    <div class="lg slide"><b>Slide nói</b><small>Câu chữ trong tài liệu Chương 2, kèm số trang.</small></div>
+    <div class="lg plain-c"><b>Hiểu nôm na</b><small>Cùng ý đó, nói bằng lời thường, có ví dụ.</small></div>
+    <div class="lg code-c"><b>Code thật</b><small>Chép thẳng từ file lúc mở trang, số dòng bên trái là số dòng thật.</small></div>
+    <div class="lg var-c"><b>Các biến</b><small>Mỗi biến là một cái hộp có tên. Bảng ghi hộp đựng gì khi chạy ví dụ.</small></div>
+  </div>
+  <p class="hint">Ví dụ TinyDES: bản rõ <span class="mono">01011100</span>, khóa <span class="mono">10011010</span> (bài tập slide 72).
+    Ví dụ DES: khối <span class="mono">0123456789ABCDEF</span>, khóa <span class="mono">133457799BBCDFF1</span>. Mọi con số do chính code tính ra lúc bạn mở trang.</p>
+  <div class="plain-box">
+    <p><b>3 điều cần biết trước khi đọc code Python:</b></p>
+    <p>1. <code>x = 5</code> nghĩa là <b>bỏ 5 vào hộp tên x</b>, không phải “x bằng 5” như toán. Gán lại thì giá trị cũ mất.</p>
+    <p>2. <code>def ten(a, b):</code> là <b>định nghĩa một cái máy</b> tên <code>ten</code>, nhận 2 thứ <code>a</code>, <code>b</code>. Các dòng thụt vào bên dưới là việc máy làm. <code>return</code> là thứ máy trả ra.</p>
+    <p>3. Chữ sau dấu <code>#</code> là <b>ghi chú</b> cho người đọc, máy bỏ qua. Code của nhóm có ghi chú kèm ví dụ ở gần như mọi dòng.</p>
+  </div>
+</section>
+
+
+<section class="card" id="ban-do">
+  <h2 class="card-title">Bản đồ: file nào làm gì</h2>
+  <div class="map">
+    <div class="map-col">
+      <h3>Phần thuật toán <small>thư mục core/</small></h3>
+      <div class="map-file core"><code>tinydes_core.py</code><small>TinyDES: bảng luật, dụng cụ, làm 3 chìa, 3 vòng, mã câu chữ, bẻ khóa</small></div>
+      <div class="map-file core"><code>des_tables.py</code><small>Các bảng chuẩn của DES: IP, E, P, PC-1, PC-2, 8 S-box</small></div>
+      <div class="map-file core"><code>des_core.py</code><small>DES: làm 16 chìa, 16 vòng, bản dễ đọc và bản chạy nhanh</small></div>
+      <div class="map-file core"><code>utils.py</code><small>Đệm cho đủ 8 byte, chia khối, đọc khóa, đọc ghi tệp</small></div>
+    </div>
+    <div class="map-col">
+      <h3>Phần giao diện <small>không tự mã hóa</small></h3>
+      <div class="map-file ui"><code>app.py</code><small>Nhận dữ liệu từ trình duyệt, gọi core/, trả trang web về</small></div>
+      <div class="map-file ui"><code>templates/*.html</code><small>Khuôn các trang web, điền dữ liệu bằng {{ ... }}</small></div>
+      <div class="map-file ui"><code>static/style.css</code>, <code>chat.js</code><small>Màu sắc, bố cục; phòng chat gọi API bằng JavaScript</small></div>
+      <div class="map-file ui"><code>db.py</code><small>Ghi lịch sử vào history.db (không ghi khóa)</small></div>
+    </div>
+  </div>
+  <p class="hint">Quy tắc vàng: <b>muốn hiểu thuật toán thì đọc core/</b>. app.py chỉ là bồi bàn: nhận order, đưa vào bếp (core/), mang món ra.</p>
+</section>
+
+
+<h2 class="section-title">Phần A · TinyDES trong <code>core/tinydes_core.py</code></h2>
+
+<article class="card cg" id="t1">
+  <header class="cg-head"><span class="scene-no">A1</span><div><h3>Bảng luật cố định</h3><small>slide 69, 70, 71</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4>
+      <p>Expand cho ra <i>b2 b3 b1 b2 b1 b0</i>. P-box cho ra <i>b2 b0 b3 b1</i>. Nén khóa thành <i>k5 k1 k3 k2 k7 k0</i>. Vòng 1, 2, 3 dịch vòng trái 1, 2, 1 bit.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4>
+      <p>Đây là “công thức nấu ăn” do người thiết kế đặt ra, không tính ra từ dữ liệu. Code chép y nguyên thành danh sách số.
+        Ví dụ <code>EXPAND = [2, 3, 1, 2, 1, 0]</code> đọc là: “lấy ô 2, rồi ô 3, rồi ô 1, rồi ô 2, rồi ô 1, rồi ô 0”.</p></div>
+  </div>
+  <table class="log small cg-vars">
+    <tr><th>Biến</th><th>Giá trị</th><th>Nghĩa</th></tr>
+    <tr><td class="mono">EXPAND</td><td class="mono">[2, 3, 1, 2, 1, 0]</td><td>Kéo 4 ô thành 6 ô</td></tr>
+    <tr><td class="mono">PBOX</td><td class="mono">[2, 0, 3, 1]</td><td>Xếp lại 4 ô</td></tr>
+    <tr><td class="mono">COMPRESS</td><td class="mono">[5, 1, 3, 2, 7, 0]</td><td>Chọn 6 trong 8 ô làm chìa (bỏ ô 4, ô 6)</td></tr>
+    <tr><td class="mono">SHIFTS</td><td class="mono">[1, 2, 1]</td><td>Vòng 1 xoay 1 ô, vòng 2 xoay 2 ô, vòng 3 xoay 1 ô</td></tr>
+    <tr><td class="mono">SBOX</td><td class="mono">4 hàng × 16 cột</td><td>Bảng tra. <code>SBOX[3][2]</code> = hàng 3, cột 2 = <b>8</b></td></tr>
+  </table>
+</article>
+
+<article class="card cg" id="t2">
+  <header class="cg-head"><span class="scene-no">A2</span><div><h3>3 dụng cụ dùng ở mọi bước: chép ô, xoay, so cặp</h3><small>dùng cho Expand, P-box, nén khóa, xoay khóa, XOR</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>Hoán vị, dịch vòng trái, và phép ⊕ (XOR).</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4>
+      <p><b>permute</b>: chép ô theo bảng. <code>permute("1100", EXPAND)</code> = <b>"001011"</b>.<br>
+        <b>left_shift</b>: ô đầu chạy ra cuối. <code>left_shift("1001", 1)</code> = <b>"0011"</b>.<br>
+        <b>xor</b>: so từng cặp, giống → 0, khác → 1. <code>xor("001011", "101110")</code> = <b>"100101"</b>.</p></div>
+  </div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/tinydes_core.py</code><span>dòng 44–51</span></div>
+  <pre class="numbered"><span class="ln">44</span>def permute(bits, table):
+<span class="ln">45</span>    &#34;&#34;&#34;
+<span class="ln">46</span>    Hoán vị / mở rộng / nén chuỗi bit theo bảng (chỉ số bắt đầu từ 0 như tài liệu).
+<span class="ln">47</span>    VD: permute(&#34;0110&#34;, EXPAND) = &#34;101110&#34;        (b2 b3 b1 b2 b1 b0 = 1 0 1 1 1 0)
+<span class="ln">48</span>        permute(&#34;1000&#34;, PBOX)   = &#34;0100&#34;          (b2 b0 b3 b1 = 0 1 0 0)
+<span class="ln">49</span>    &#34;&#34;&#34;
+<span class="ln">50</span>    # &#34;&#34;.join(...): nối các ký tự lấy được thành 1 chuỗi
+<span class="ln">51</span>    return &#34;&#34;.join(bits[i] for i in table)
+</pre>
+</div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/tinydes_core.py</code><span>dòng 54–61</span></div>
+  <pre class="numbered"><span class="ln">54</span>def left_shift(bits, n):
+<span class="ln">55</span>    &#34;&#34;&#34;
+<span class="ln">56</span>    Dịch vòng trái n bit.
+<span class="ln">57</span>    VD: left_shift(&#34;1001&#34;, 1) = &#34;0011&#34;
+<span class="ln">58</span>        left_shift(&#34;0011&#34;, 2) = &#34;1100&#34;
+<span class="ln">59</span>    &#34;&#34;&#34;
+<span class="ln">60</span>    # bits[n:] = phần từ vị trí n đến hết, bits[:n] = n ký tự đầu -&gt; ghép lại: phần sau + phần đầu
+<span class="ln">61</span>    return bits[n:] + bits[:n]
+</pre>
+</div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/tinydes_core.py</code><span>dòng 64–70</span></div>
+  <pre class="numbered"><span class="ln">64</span>def xor(a, b):
+<span class="ln">65</span>    &#34;&#34;&#34;
+<span class="ln">66</span>    XOR từng bit của 2 chuỗi cùng độ dài: giống nhau -&gt; 0, khác nhau -&gt; 1.
+<span class="ln">67</span>    VD: xor(&#34;001011&#34;, &#34;101110&#34;) = &#34;100101&#34;
+<span class="ln">68</span>    &#34;&#34;&#34;
+<span class="ln">69</span>    # zip(a, b): ghép từng cặp ký tự cùng vị trí
+<span class="ln">70</span>    return &#34;&#34;.join(&#34;0&#34; if x == y else &#34;1&#34; for x, y in zip(a, b))
+</pre>
+</div>
+  <table class="log small cg-vars">
+    <tr><th>Biến</th><th>Là gì</th><th>Ví dụ</th></tr>
+    <tr><td class="mono">bits</td><td>Dãy ô đưa vào (chuỗi '0'/'1')</td><td class="mono">"1100"</td></tr>
+    <tr><td class="mono">table</td><td>Bảng luật: lấy ô số mấy</td><td class="mono">[2, 3, 1, 2, 1, 0]</td></tr>
+    <tr><td class="mono">i</td><td>Số ô đang lấy, chạy lần lượt theo table</td><td class="mono">2 → 3 → 1 → 2 → 1 → 0</td></tr>
+    <tr><td class="mono">bits[n:] / bits[:n]</td><td>Phần từ ô n đến hết / n ô đầu</td><td class="mono">"001" / "1"</td></tr>
+    <tr><td class="mono">x, y</td><td>1 cặp ký tự cùng vị trí (zip ghép 2 dãy)</td><td class="mono">"0", "1"</td></tr>
+  </table>
+</article>
+
+<article class="card cg" id="t3">
+  <header class="cg-head"><span class="scene-no">A3</span><div><h3>Làm 3 chìa K1, K2, K3</h3><small>slide 71 · hàm generate_keys</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4>
+      <p>Khóa K 8 bit chia thành KL0, KR0. Vòng 1 dịch vòng trái 1 bit, vòng 2 dịch 2 bit, vòng 3 dịch 1 bit. Kᵢ = nén KLᵢKRᵢ thành k5 k1 k3 k2 k7 k0.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4>
+      <p>Cắt khóa làm 2 nửa. Mỗi vòng: xoay <b>tiếp</b> cả 2 nửa, ghép lại 8 ô, chọn 6 ô làm chìa. Làm 3 lần ra 3 chìa.</p>
+      <p class="mini">Khóa <span class="mono">10011010</span> → K1 <b class="mono">101110</b>, K2 <b class="mono">110011</b>, K3 <b class="mono">001001</b></p></div>
+  </div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/tinydes_core.py</code><span>dòng 95–118</span></div>
+  <pre class="numbered"><span class="ln">95</span>def generate_keys(key_8bit, log=None):
+<span class="ln">96</span>    &#34;&#34;&#34;
+<span class="ln">97</span>    Sinh K1, K2, K3 (mỗi khóa 6 bit) từ khóa 8 bit:
+<span class="ln">98</span>      chia KL0 | KR0 (4 bit | 4 bit) -&gt; vòng i: dịch vòng trái SHIFTS[i] bit mỗi nửa -&gt; Ki = Compress(KLi KRi)
+<span class="ln">99</span>    VD: generate_keys(&#34;10011010&#34;) = (&#34;101110&#34;, &#34;110011&#34;, &#34;001001&#34;)
+<span class="ln">100</span>        KL0 = 1001, KR0 = 1010
+<span class="ln">101</span>        vòng 1: dịch 1 -&gt; 0011 0101 -&gt; K1 = 101110
+<span class="ln">102</span>        vòng 2: dịch 2 -&gt; 1100 0101 -&gt; K2 = 110011
+<span class="ln">103</span>        vòng 3: dịch 1 -&gt; 1001 1010 -&gt; K3 = 001001
+<span class="ln">104</span>    &#34;&#34;&#34;
+<span class="ln">105</span>    if not is_bits(key_8bit, 8):                                # khóa sai định dạng -&gt; báo lỗi
+<span class="ln">106</span>        raise ValueError(&#34;Khóa TinyDES phải là chuỗi 8 bit (0/1).&#34;)
+<span class="ln">107</span>
+<span class="ln">108</span>    _log(log, &#34;Khóa 8 bit&#34;, key_8bit)
+<span class="ln">109</span>    kl, kr = key_8bit[:4], key_8bit[4:]                         # VD KL0 = 1001, KR0 = 1010
+<span class="ln">110</span>    _log(log, &#34;KL0 | KR0&#34;, f&#34;{kl} {kr}&#34;, &#34;Chia đôi khóa&#34;)
+<span class="ln">111</span>    keys = []
+<span class="ln">112</span>    for i, s in enumerate(SHIFTS, start=1):                     # i = 1, 2, 3 ; s = 1, 2, 1
+<span class="ln">113</span>        kl, kr = left_shift(kl, s), left_shift(kr, s)           # dịch TIẾP từ kết quả vòng trước
+<span class="ln">114</span>        _log(log, f&#34;KL{i} | KR{i}&#34;, f&#34;{kl} {kr}&#34;, f&#34;Dịch vòng trái {s} bit mỗi nửa&#34;)
+<span class="ln">115</span>        k = permute(kl + kr, COMPRESS)                          # nén 8 -&gt; 6 bit
+<span class="ln">116</span>        _log(log, f&#34;K{i}&#34;, k, &#34;Compress: k5 k1 k3 k2 k7 k0&#34;)
+<span class="ln">117</span>        keys.append(k)
+<span class="ln">118</span>    return tuple(keys)                                          # (K1, K2, K3)
+</pre>
+</div>
+  <h4 class="cg-h">Các hộp thay đổi thế nào khi chạy</h4>
+  <table class="log small cg-vars">
+    <tr><th>Lúc</th><th>kl | kr</th><th>k (chìa vừa làm)</th><th>keys (giỏ chìa)</th></tr>
+    <tr><td>Sau dòng cắt đôi</td><td class="mono">1001 | 1010</td><td></td><td class="mono">[]</td></tr>
+    
+    
+    <tr><td>Vòng 1 (i = 1, s = 1)</td><td class="mono">0011 | 0101</td>
+      <td class="mono"><b>101110</b></td><td class="mono">[&#39;101110&#39;]</td></tr>
+    
+    
+    <tr><td>Vòng 2 (i = 2, s = 2)</td><td class="mono">1100 | 0101</td>
+      <td class="mono"><b>110011</b></td><td class="mono">[&#39;101110&#39;, &#39;110011&#39;]</td></tr>
+    
+    
+    <tr><td>Vòng 3 (i = 3, s = 1)</td><td class="mono">1001 | 1010</td>
+      <td class="mono"><b>001001</b></td><td class="mono">[&#39;101110&#39;, &#39;110011&#39;, &#39;001001&#39;]</td></tr>
+    
+  </table>
+  <p class="hint">Dòng <code>for i, s in enumerate(SHIFTS, start=1)</code>: đi qua từng số trong SHIFTS, bỏ số thứ tự vào hộp <code>i</code> (đếm từ 1), bỏ số đó vào hộp <code>s</code>.
+    Dòng <code>kl, kr = left_shift(kl, s), left_shift(kr, s)</code> ghi đè lên hộp cũ, nên vòng sau xoay <b>tiếp</b> từ kết quả vòng trước.</p>
+</article>
+
+<article class="card cg" id="t4">
+  <header class="cg-head"><span class="scene-no">A4</span><div><h3>Tra bảng S-box: 6 ô thành 4 ô</h3><small>slide 69–70 · hàm sbox_lookup</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>Hai bít b0b5 xác định hàng, bốn bít b1b2b3b4 xác định cột. Dựa vào bảng tính được 4 bít đầu ra.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4>
+      <p>Giống tra bảng cửu chương. Vào <span class="mono">100101</span>: ô đầu + ô cuối = <span class="mono">11</span> = hàng <b>3</b>;
+        4 ô giữa <span class="mono">0010</span> = cột <b>2</b>; ô đó ghi <b>8</b> → <b class="mono">1000</b>.</p></div>
+  </div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/tinydes_core.py</code><span>dòng 124–133</span></div>
+  <pre class="numbered"><span class="ln">124</span>def sbox_lookup(bits6):
+<span class="ln">125</span>    &#34;&#34;&#34;
+<span class="ln">126</span>    Tra S-box: hàng = b0 b5 (bit đầu + bit cuối), cột = b1 b2 b3 b4 (4 bit giữa) -&gt; 4 bit.
+<span class="ln">127</span>    Trả về (4 bit kết quả, hàng, cột).
+<span class="ln">128</span>    VD: sbox_lookup(&#34;101010&#34;): hàng = &#34;10&#34; = 2, cột = &#34;0101&#34; = 5 -&gt; SBOX[2][5] = 6 -&gt; (&#34;0110&#34;, 2, 5)
+<span class="ln">129</span>    &#34;&#34;&#34;
+<span class="ln">130</span>    row = int(bits6[0] + bits6[5], 2)       # ghép b0 và b5 rồi đổi từ nhị phân sang số  VD &#34;10&#34; -&gt; 2
+<span class="ln">131</span>    col = int(bits6[1:5], 2)                # 4 bit giữa b1 b2 b3 b4                     VD &#34;0101&#34; -&gt; 5
+<span class="ln">132</span>    # format(..., &#34;04b&#34;): đổi số sang nhị phân đủ 4 chữ số  VD 6 -&gt; &#34;0110&#34;
+<span class="ln">133</span>    return format(SBOX[row][col], &#34;04b&#34;), row, col
+</pre>
+</div>
+  <table class="log small cg-vars">
+    <tr><th>Biến / biểu thức</th><th>Giá trị (vòng 1)</th><th>Nghĩa</th></tr>
+    <tr><td class="mono">bits6</td><td class="mono">"100101"</td><td>6 ô đưa vào</td></tr>
+    <tr><td class="mono">bits6[0] + bits6[5]</td><td class="mono">"11"</td><td>ô đầu ghép ô cuối</td></tr>
+    <tr><td class="mono">row = int(…, 2)</td><td class="mono">3</td><td>đọc chuỗi đó như số nhị phân</td></tr>
+    <tr><td class="mono">bits6[1:5]</td><td class="mono">"0010"</td><td>ô 1, 2, 3, 4 (cắt từ 1, dừng trước 5)</td></tr>
+    <tr><td class="mono">col</td><td class="mono">2</td><td>số cột</td></tr>
+    <tr><td class="mono">format(…, "04b")</td><td class="mono">"1000"</td><td>đổi số ra 4 ô 0/1</td></tr>
+  </table>
+</article>
+
+<article class="card cg" id="t5">
+  <header class="cg-head"><span class="scene-no">A5</span><div><h3>Máy xay F: Expand → XOR chìa → S-box → P-box</h3><small>slide 68–70 · hàm f_function</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>F(R, K) = P-box( S-box( Expand(R) ⊕ K ) ).</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4><p>4 việc nối đuôi nhau, mỗi việc bỏ kết quả vào 1 hộp mới:
+      <span class="mono">half4</span> → <span class="mono">ex</span> → <span class="mono">x</span> → <span class="mono">s</span> → <span class="mono">f</span>.</p></div>
+  </div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/tinydes_core.py</code><span>dòng 136–150</span></div>
+  <pre class="numbered"><span class="ln">136</span>def f_function(half4, subkey, log=None, tag=&#34;&#34;):
+<span class="ln">137</span>    &#34;&#34;&#34;
+<span class="ln">138</span>    F(R, K) = P-box( S-box( Expand(R) ⊕ K ) ), trả về 4 bit.
+<span class="ln">139</span>    VD vòng 1 của ví dụ: R0 = &#34;1100&#34;, K1 = &#34;101110&#34;
+<span class="ln">140</span>        Expand = 001011,  ⊕K1 = 100101,  S-box = 1000,  P-box = 0100
+<span class="ln">141</span>    &#34;&#34;&#34;
+<span class="ln">142</span>    ex = permute(half4, EXPAND)             # 4 -&gt; 6 bit                  VD 1100 -&gt; 001011
+<span class="ln">143</span>    _log(log, f&#34;{tag} Expand&#34;, ex, &#34;b2 b3 b1 b2 b1 b0&#34;)
+<span class="ln">144</span>    x = xor(ex, subkey)                     # XOR với khóa con 6 bit       VD 001011 ⊕ 101110 = 100101
+<span class="ln">145</span>    _log(log, f&#34;{tag} ⊕ K&#34;, x, f&#34;XOR với khóa con {subkey}&#34;)
+<span class="ln">146</span>    s, row, col = sbox_lookup(x)            # 6 -&gt; 4 bit                  VD 100101 -&gt; hàng 3, cột 2 -&gt; 1000
+<span class="ln">147</span>    _log(log, f&#34;{tag} S-box&#34;, s, f&#34;hàng {row}, cột {col}&#34;)
+<span class="ln">148</span>    f = permute(s, PBOX)                    # hoán vị 4 bit               VD 1000 -&gt; 0100
+<span class="ln">149</span>    _log(log, f&#34;{tag} P-box = F&#34;, f, &#34;b2 b0 b3 b1&#34;)
+<span class="ln">150</span>    return f
+</pre>
+</div>
+  <div class="pipe">
+    <div><small>half4 (R0)</small><b class="mono">1100</b></div><span>→ Expand →</span>
+    <div><small>ex</small><b class="mono">001011</b></div><span>→ ⊕ K1 101110 →</span>
+    <div><small>x</small><b class="mono">100101</b></div><span>→ S-box →</span>
+    <div><small>s</small><b class="mono">1000</b></div><span>→ P-box →</span>
+    <div class="out"><small>f (F)</small><b class="mono">0100</b></div>
+  </div>
+</article>
+
+<article class="card cg" id="t6">
+  <header class="cg-head"><span class="scene-no">A6</span><div><h3>3 vòng trộn (vòng Feistel)</h3><small>slide 68 · hàm _encrypt_block</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>Lᵢ = Rᵢ₋₁ ; Rᵢ = Lᵢ₋₁ ⊕ F(Rᵢ₋₁, Kᵢ). Bản mã C = L3R3.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4><p>Hai bạn chuyền bóng: nửa phải vào máy xay, kết quả trộn vào nửa trái thành nửa phải mới; nửa phải cũ sang làm nửa trái. Cả câu đó là <b>1 dòng code</b>: <code>left, right = right, xor(left, f)</code>.</p></div>
+  </div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/tinydes_core.py</code><span>dòng 156–167</span></div>
+  <pre class="numbered"><span class="ln">156</span>def _encrypt_block(bits8, keys, log=None):
+<span class="ln">157</span>    &#34;&#34;&#34;
+<span class="ln">158</span>    Mã hóa 1 khối: 3 vòng  L_i = R_(i-1),  R_i = L_(i-1) ⊕ F(R_(i-1), K_i).  Bản mã = L3 R3.
+<span class="ln">159</span>    VD: _encrypt_block(&#34;01011100&#34;, (&#34;101110&#34;, &#34;110011&#34;, &#34;001001&#34;)) = &#34;10010010&#34;
+<span class="ln">160</span>        L0 R0 = 0101 1100 -&gt; 1100 0001 -&gt; 0001 1001 -&gt; 1001 0010
+<span class="ln">161</span>    &#34;&#34;&#34;
+<span class="ln">162</span>    left, right = bits8[:4], bits8[4:]
+<span class="ln">163</span>    for i, k in enumerate(keys, start=1):
+<span class="ln">164</span>        f = f_function(right, k, log, f&#34;Vòng {i}&#34;)
+<span class="ln">165</span>        left, right = right, xor(left, f)   # Python tính hết vế phải trước rồi mới gán cùng lúc
+<span class="ln">166</span>        _log(log, f&#34;Vòng {i} kết quả&#34;, f&#34;{left} {right}&#34;, f&#34;L{i} = R{i - 1},  R{i} = L{i - 1} ⊕ F&#34;)
+<span class="ln">167</span>    return left + right
+</pre>
+</div>
+  <h4 class="cg-h">Các hộp left, right qua từng vòng</h4>
+  <table class="log small cg-vars">
+    <tr><th>Lúc</th><th>k</th><th>f</th><th>left</th><th>right</th></tr>
+    <tr><td>Sau dòng cắt đôi</td><td></td><td></td><td class="mono">0101</td><td class="mono">1100</td></tr>
+    
+    <tr><td>Vòng 1</td><td class="mono">101110</td><td class="mono">0100</td><td class="mono">1100</td><td class="mono"><b>0001</b></td></tr>
+    
+    <tr><td>Vòng 2</td><td class="mono">110011</td><td class="mono">0101</td><td class="mono">0001</td><td class="mono"><b>1001</b></td></tr>
+    
+    <tr><td>Vòng 3</td><td class="mono">001001</td><td class="mono">0011</td><td class="mono">1001</td><td class="mono"><b>0010</b></td></tr>
+    
+    <tr class="io"><td>return left + right</td><td colspan="4" class="mono">10010010</td></tr>
+  </table>
+  <p class="hint">Vì sao viết 1 dòng mà không viết 2 dòng <code>left = right</code> rồi <code>right = xor(left, f)</code>? Vì Python tính <b>hết vế phải trước</b> bằng giá trị cũ, rồi mới bỏ vào 2 hộp cùng lúc. Viết 2 dòng thì dòng sau dùng nhầm <code>left</code> mới.</p>
+</article>
+
+<article class="card cg" id="t7">
+  <header class="cg-head"><span class="scene-no">A7</span><div><h3>Giải mã: đi ngược, chìa ngược</h3><small>slide 66 · hàm _decrypt_block</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>Rᵢ₋₁ = Lᵢ ; Lᵢ₋₁ = Rᵢ ⊕ F(Rᵢ₋₁, Kᵢ). Cuối cùng được P = (L0, R0).</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4><p>Nửa đưa vào máy xay được giữ nguyên, nên Bình tính lại được <b>đúng F</b>. Trộn F thêm lần nữa thì triệt tiêu. Chỉ cần đi vòng 3 → 1 với chìa K3 → K1. Dùng lại đúng hàm f_function, không cần hàm ngược.</p></div>
+  </div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/des_core.py</code><span>dòng 300–308</span></div>
+  <pre class="numbered"><span class="ln">300</span>def decrypt_block(block, key):
+<span class="ln">301</span>    &#34;&#34;&#34;
+<span class="ln">302</span>    Giải mã 1 khối 8 byte - CHỈ KHÁC mã hóa ở chỗ đảo ngược thứ tự khóa con.
+<span class="ln">303</span>    VD: decrypt_block(bytes.fromhex(&#34;85E813540F0AB405&#34;), bytes.fromhex(&#34;133457799BBCDFF1&#34;))
+<span class="ln">304</span>        -&gt; bytes.fromhex(&#34;0123456789ABCDEF&#34;)
+<span class="ln">305</span>    &#34;&#34;&#34;
+<span class="ln">306</span>    sk = prepare_keys(generate_subkeys(key)[::-1])  # giải mã = dùng khóa con theo thứ tự ngược
+<span class="ln">307</span>    #                                                 [::-1] đảo ngược list: [K1..K16] -&gt; [K16..K1]
+<span class="ln">308</span>    return crypt_block_fast(int.from_bytes(block, &#34;big&#34;), sk).to_bytes(8, &#34;big&#34;)
+</pre>
+</div>
+  <p class="hint"><code>range(3, 0, -1)</code> sinh ra 3, 2, 1. <code>keys[i - 1]</code> trừ 1 vì giỏ đánh số từ 0: K3 là <code>keys[2]</code>.</p>
+</article>
+
+<article class="card cg" id="t8">
+  <header class="cg-head"><span class="scene-no">A8</span><div><h3>Cửa ngõ encrypt() và mã cả câu chữ</h3><small>hàm encrypt, encrypt_bytes</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4>
+    <p><code>encrypt(P, K)</code> = kiểm tra đúng 8 bit → làm 3 chìa → 3 vòng → trả (bản mã, nhật ký). Câu chữ thì đổi từng chữ ra 1 byte (8 ô), mã từng byte bằng đúng 3 vòng trên:
+      <span class="mono">"Hello"</span> → <b class="mono">67 B3 20 20 A2</b>.</p></div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/tinydes_core.py</code><span>dòng 184–196</span></div>
+  <pre class="numbered"><span class="ln">184</span>def encrypt(plain_8bit, key_8bit):
+<span class="ln">185</span>    &#34;&#34;&#34;
+<span class="ln">186</span>    Mã hóa 1 khối 8-bit. Trả về (bản mã, log_trung_gian).
+<span class="ln">187</span>    VD: encrypt(&#34;01011100&#34;, &#34;10011010&#34;) -&gt; (&#34;10010010&#34;, [ ...các bước... ])
+<span class="ln">188</span>    &#34;&#34;&#34;
+<span class="ln">189</span>    if not is_bits(plain_8bit, 8):
+<span class="ln">190</span>        raise ValueError(&#34;Bản rõ TinyDES phải là chuỗi 8 bit (0/1).&#34;)
+<span class="ln">191</span>    log_trung_gian = []                                     # danh sách lưu mọi thanh ghi trung gian
+<span class="ln">192</span>    keys = generate_keys(key_8bit, log_trung_gian)          # B1: sinh K1, K2, K3
+<span class="ln">193</span>    _log(log_trung_gian, &#34;Bản rõ&#34;, f&#34;{plain_8bit[:4]} {plain_8bit[4:]}&#34;, &#34;L0 R0&#34;)
+<span class="ln">194</span>    cipher = _encrypt_block(plain_8bit, keys, log_trung_gian)   # B2: 3 vòng Feistel
+<span class="ln">195</span>    _log(log_trung_gian, &#34;Bản mã&#34;, cipher, &#34;C = L3 R3&#34;)
+<span class="ln">196</span>    return cipher, log_trung_gian
+</pre>
+</div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/tinydes_core.py</code><span>dòng 217–230</span></div>
+  <pre class="numbered"><span class="ln">217</span>def encrypt_bytes(data, key_8bit, keys=None):
+<span class="ln">218</span>    &#34;&#34;&#34;
+<span class="ln">219</span>    Mã hóa từng byte của data (mỗi byte = 1 khối 8 bit).
+<span class="ln">220</span>    keys: có thể truyền sẵn (K1, K2, K3) để khỏi sinh lại (brute-force dùng cách này).
+<span class="ln">221</span>    VD: encrypt_bytes(b&#34;Hello&#34;, &#34;10011010&#34;) = bytes 67 B3 20 20 A2
+<span class="ln">222</span>        &#39;H&#39; = 0x48 = 72 -&gt; &#34;01001000&#34; -&gt; mã hóa -&gt; &#34;01100111&#34; -&gt; 103 = 0x67
+<span class="ln">223</span>    &#34;&#34;&#34;
+<span class="ln">224</span>    keys = keys or generate_keys(key_8bit)      # &#34;keys or ...&#34;: nếu keys là None thì mới sinh khóa
+<span class="ln">225</span>    # với mỗi byte b (số 0..255):
+<span class="ln">226</span>    #   format(b, &#34;08b&#34;)  : số -&gt; chuỗi 8 bit       VD 72 -&gt; &#34;01001000&#34;
+<span class="ln">227</span>    #   _encrypt_block    : mã hóa khối 8 bit       -&gt; &#34;01100111&#34;
+<span class="ln">228</span>    #   int(..., 2)       : chuỗi nhị phân -&gt; số    -&gt; 103
+<span class="ln">229</span>    # bytes(...)          : gom các số lại thành dãy byte
+<span class="ln">230</span>    return bytes(int(_encrypt_block(format(b, &#34;08b&#34;), keys), 2) for b in data)
+</pre>
+</div>
+  <p class="hint">Đọc dòng <code>bytes(int(_encrypt_block(format(b, "08b"), keys), 2) for b in data)</code> từ trong ra ngoài: số → 8 ô (<code>format</code>) → 3 vòng → số (<code>int(…, 2)</code>) → gom thành dãy byte.</p>
+</article>
+
+<article class="card cg eve" id="t9">
+  <header class="cg-head"><span class="scene-no">A9</span><div><h3>Kẻ xấu chỉ có bản mã: thử 256 khóa, chấm điểm</h3><small>hàm brute_force_ciphertext_only</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4>
+    <p>Với mỗi khóa trong 256 khóa: làm 3 chìa, giải mã thử, chấm điểm “giống chữ” (<code>readability_score</code>). Xếp từ cao xuống thấp, lấy vài khóa đầu. Khóa đúng ra câu có nghĩa nên đứng đầu.</p></div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/tinydes_core.py</code><span>dòng 298–311</span></div>
+  <pre class="numbered"><span class="ln">298</span>def brute_force_ciphertext_only(cipher_bytes, top=5):
+<span class="ln">299</span>    &#34;&#34;&#34;
+<span class="ln">300</span>    Thử 256 khóa, giải mã bản mã và xếp hạng theo readability_score.
+<span class="ln">301</span>    Trả về list `top` ứng viên tốt nhất: [{&#34;key&#34;, &#34;dec&#34;, &#34;subkeys&#34;, &#34;score&#34;, &#34;plain&#34;}, ...] (hạng 1 trước).
+<span class="ln">302</span>    VD: brute_force_ciphertext_only(encrypt_bytes(&#34;Hẹn gặp lúc 8h&#34;.encode(), &#34;11011010&#34;))[0][&#34;key&#34;] = &#34;11011010&#34;
+<span class="ln">303</span>    &#34;&#34;&#34;
+<span class="ln">304</span>    candidates = []
+<span class="ln">305</span>    for key in all_keys():
+<span class="ln">306</span>        keys = generate_keys(key)
+<span class="ln">307</span>        plain = decrypt_bytes(cipher_bytes, key, keys)
+<span class="ln">308</span>        candidates.append({&#34;key&#34;: key, &#34;dec&#34;: int(key, 2), &#34;subkeys&#34;: keys,
+<span class="ln">309</span>                           &#34;score&#34;: readability_score(plain), &#34;plain&#34;: plain})
+<span class="ln">310</span>    candidates.sort(key=lambda c: c[&#34;score&#34;], reverse=True)    # điểm cao nhất lên đầu
+<span class="ln">311</span>    return candidates[:top]
+</pre>
+</div>
+</article>
+
+
+<h2 class="section-title">Phần B · DES trong <code>core/des_core.py</code> và <code>core/utils.py</code></h2>
+<p class="hint">DES làm y hệt TinyDES nhưng dữ liệu là <b>số nguyên</b> (không phải chuỗi '0'/'1') để chạy nhanh. Nên code dùng phép toán bit:
+  <code>&gt;&gt;</code> dịch phải, <code>&lt;&lt;</code> dịch trái, <code>&amp;</code> lấy bớt bit, <code>|</code> ghép bit, <code>^</code> XOR.</p>
+
+<article class="card cg binh" id="d1">
+  <header class="cg-head"><span class="scene-no">B1</span><div><h3>Đọc khóa: 8 ký tự hoặc 16 hex → 8 byte</h3><small>hàm parse_des_key</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4><p>Gõ 16 ký tự hex thì cứ 2 ký tự là 1 byte. Gõ 8 chữ thường thì mỗi chữ là 1 byte theo bảng mã. Độ dài khác thì báo lỗi.</p></div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/utils.py</code><span>dòng 65–81</span></div>
+  <pre class="numbered"><span class="ln">65</span>def parse_des_key(text):
+<span class="ln">66</span>    &#34;&#34;&#34;
+<span class="ln">67</span>    Chấp nhận 8 ký tự ASCII hoặc 16 ký tự hex.
+<span class="ln">68</span>    VD: &#34;133457799BBCDFF1&#34; -&gt; b&#39;\\x13\\x34\\x57\\x79\\x9b\\xbc\\xdf\\xf1&#39; (8 byte)
+<span class="ln">69</span>        &#34;nhom2026&#34;         -&gt; b&#39;nhom2026&#39; (8 byte, mỗi ký tự là 1 byte mã ASCII: n = 110, h = 104, ...)
+<span class="ln">70</span>        &#34;abc&#34;              -&gt; báo lỗi
+<span class="ln">71</span>    &#34;&#34;&#34;
+<span class="ln">72</span>    text = text.strip()                     # bỏ khoảng trắng/xuống dòng ở 2 đầu
+<span class="ln">73</span>    if len(text) == 16:                     # 16 ký tự -&gt; thử hiểu là hex
+<span class="ln">74</span>        try:
+<span class="ln">75</span>            return bytes.fromhex(text)      # &#34;13&#34; -&gt; 0x13, &#34;34&#34; -&gt; 0x34 ... -&gt; 8 byte
+<span class="ln">76</span>        except ValueError:                  # có ký tự không phải hex (VD &#34;g&#34;) -&gt; thử cách khác bên dưới
+<span class="ln">77</span>            pass
+<span class="ln">78</span>    raw = text.encode(&#34;utf-8&#34;)              # chuỗi -&gt; bytes theo UTF-8
+<span class="ln">79</span>    if len(raw) == 8:                       # đúng 8 byte thì dùng làm khóa
+<span class="ln">80</span>        return raw
+<span class="ln">81</span>    raise ValueError(&#34;Khóa DES phải là 8 ký tự hoặc 16 ký tự hex (VD: 133457799BBCDFF1).&#34;)
+</pre>
+</div>
+</article>
+
+<article class="card cg binh" id="d2">
+  <header class="cg-head"><span class="scene-no">B2</span><div><h3>Làm 16 chìa: PC-1 → cắt đôi → xoay → PC-2</h3><small>slide 79 · hàm generate_subkeys</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>Khóa 64 bít rút trích thành 56 bít, chia KL0, KR0 mỗi nửa 28 bít. Vòng i dịch vòng trái rᵢ bít (1 nếu i ∈ {1, 2, 9, 16}, còn lại 2). Kᵢ = nén 56 bít thành 48 bít.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4><p>Giống TinyDES, thêm bước bỏ 8 ô thừa (PC-1) và làm 16 lần. <span class="mono">c</span>, <span class="mono">d</span> chính là KL, KR trên slide.</p></div>
+  </div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/des_core.py</code><span>dòng 59–91</span></div>
+  <pre class="numbered"><span class="ln">59</span>def generate_subkeys(key, log=None):
+<span class="ln">60</span>    &#34;&#34;&#34;
+<span class="ln">61</span>    key: 8 bytes. Trả về list 16 khóa con (int 48-bit).
+<span class="ln">62</span>    log: nếu truyền vào 1 list thì ghi C, D, K của từng vòng vào đó (web dùng để hiển thị).
+<span class="ln">63</span>
+<span class="ln">64</span>    VD: key = 133457799BBCDFF1
+<span class="ln">65</span>        -&gt; C0 = F0CCAAF, D0 = 556678F
+<span class="ln">66</span>        -&gt; K1 = 1B02EFFC7072, ..., K16 = CB3D8B0E17F5
+<span class="ln">67</span>    &#34;&#34;&#34;
+<span class="ln">68</span>    if len(key) != 8:                           # DES bắt buộc khóa đúng 8 byte = 64 bit
+<span class="ln">69</span>        raise ValueError(&#34;Khóa DES phải đúng 8 byte (64 bit).&#34;)
+<span class="ln">70</span>    k64 = int.from_bytes(key, &#34;big&#34;)            # 8 byte -&gt; số 64 bit (&#34;big&#34;: byte đầu là phần cao nhất)
+<span class="ln">71</span>    #                                             VD b&#39;\x13\x34...\xf1&#39; -&gt; 0x133457799BBCDFF1
+<span class="ln">72</span>    k56 = permute(k64, PC1, 64)                 # PC-1: bỏ 8 bit chẵn lẻ (bit 8,16,...,64) -&gt; 56 bit
+<span class="ln">73</span>    #                                             VD -&gt; 0xF0CCAAF556678F
+<span class="ln">74</span>    c, d = k56 &gt;&gt; 28, k56 &amp; 0x0FFFFFFF          # tách đôi: c = 28 bit trái, d = 28 bit phải
+<span class="ln">75</span>    #                                             (0x0FFFFFFF = 28 số 1) VD c = F0CCAAF, d = 556678F
+<span class="ln">76</span>    if log is not None:                         # chỉ ghi log khi được yêu cầu
+<span class="ln">77</span>        log.append({&#34;vong&#34;: &#34;PC-1&#34;, &#34;c&#34;: f&#34;{c:07X}&#34;, &#34;d&#34;: f&#34;{d:07X}&#34;, &#34;k&#34;: &#34;&#34;})
+<span class="ln">78</span>        #                                         f&#34;{c:07X}&#34;: in c dạng hex IN HOA, đủ 7 chữ số (thêm 0 ở đầu nếu thiếu)
+<span class="ln">79</span>
+<span class="ln">80</span>    subkeys = []                                # danh sách 16 khóa con
+<span class="ln">81</span>    for i, s in enumerate(SHIFTS, start=1):     # i = số vòng 1..16, s = số bit dịch của vòng đó
+<span class="ln">82</span>        #                                         SHIFTS = [1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1]
+<span class="ln">83</span>        c, d = rotl(c, s, 28), rotl(d, s, 28)   # dịch vòng trái MỖI NỬA s bit
+<span class="ln">84</span>        #                                         VD vòng 1: C1 = E19955F, D1 = AACCF1E
+<span class="ln">85</span>        k = permute((c &lt;&lt; 28) | d, PC2, 56)     # ghép c|d (56 bit) rồi PC-2 chọn ra 48 bit = khóa con Ki
+<span class="ln">86</span>        #                                         (c &lt;&lt; 28) đẩy c sang trái 28 bit để chừa chỗ cho d
+<span class="ln">87</span>        #                                         VD K1 = 1B02EFFC7072
+<span class="ln">88</span>        subkeys.append(k)                       # thêm Ki vào cuối danh sách
+<span class="ln">89</span>        if log is not None:
+<span class="ln">90</span>            log.append({&#34;vong&#34;: f&#34;K{i} (LS-{s})&#34;, &#34;c&#34;: f&#34;{c:07X}&#34;, &#34;d&#34;: f&#34;{d:07X}&#34;, &#34;k&#34;: f&#34;{k:012X}&#34;})
+<span class="ln">91</span>    return subkeys                              # [K1, K2, ..., K16]
+</pre>
+</div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/des_core.py</code><span>dòng 43–53</span></div>
+  <pre class="numbered"><span class="ln">43</span>def rotl(value, n, bits):
+<span class="ln">44</span>    &#34;&#34;&#34;
+<span class="ln">45</span>    Dịch VÒNG trái n bit trên số dài `bits` bit (bit bị đẩy ra bên trái quay về bên phải).
+<span class="ln">46</span>    VD: rotl(0b1000, 1, 4) = 0b0001
+<span class="ln">47</span>        rotl(0xF0CCAAF, 1, 28) = 0xE19955F   (C0 -&gt; C1 khi sinh khóa)
+<span class="ln">48</span>    &#34;&#34;&#34;
+<span class="ln">49</span>    mask = (1 &lt;&lt; bits) - 1                      # mặt nạ gồm `bits` số 1, VD bits=4 -&gt; 0b1111
+<span class="ln">50</span>    # value &lt;&lt; n          : dịch trái n bit (n bit đầu tràn ra ngoài phạm vi)      VD 1000 &lt;&lt; 1 = 10000
+<span class="ln">51</span>    # value &gt;&gt; (bits - n) : lấy đúng n bit đầu đó, đưa về cuối                      VD 1000 &gt;&gt; 3 = 0001
+<span class="ln">52</span>    # &#34;|&#34; ghép 2 phần, &#34;&amp; mask&#34; cắt phần tràn bên trái, chỉ giữ đúng `bits` bit     VD 10001 &amp; 1111 = 0001
+<span class="ln">53</span>    return ((value &lt;&lt; n) | (value &gt;&gt; (bits - n))) &amp; mask
+</pre>
+</div>
+  <table class="log small cg-vars">
+    <tr><th>Lúc</th><th>c (hex)</th><th>d (hex)</th><th>k (hex)</th></tr>
+    
+    <tr><td>PC-1</td><td class="mono">F0CCAAF</td><td class="mono">556678F</td><td class="mono"><b></b></td></tr>
+    
+    <tr><td>K1 (LS-1)</td><td class="mono">E19955F</td><td class="mono">AACCF1E</td><td class="mono"><b>1B02EFFC7072</b></td></tr>
+    
+    <tr><td>K2 (LS-1)</td><td class="mono">C332ABF</td><td class="mono">5599E3D</td><td class="mono"><b>79AED9DBC9E5</b></td></tr>
+    
+    <tr><td>K3 (LS-2)</td><td class="mono">0CCAAFF</td><td class="mono">56678F5</td><td class="mono"><b>55FC8A42CF99</b></td></tr>
+    
+    <tr><td>…</td><td colspan="3">còn 13 vòng nữa, vòng 16: K16 = <b class="mono">CB3D8B0E17F5</b></td></tr>
+  </table>
+  <p class="hint"><code>c, d = k56 &gt;&gt; 28, k56 &amp; 0x0FFFFFFF</code>: <code>&gt;&gt; 28</code> đẩy bỏ 28 bit phải nên còn nửa trái; <code>&amp; 0x0FFFFFFF</code> (28 số 1) chỉ giữ 28 bit phải.</p>
+</article>
+
+<article class="card cg binh" id="d3">
+  <header class="cg-head"><span class="scene-no">B3</span><div><h3>Đệm cho đủ khối 8 byte (PKCS#7)</h3><small>hàm pkcs7_pad, pkcs7_unpad</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4>
+    <p>Thiếu n byte thì độn n byte, mỗi byte ghi số n. “Xin chào” = 9 byte <span class="mono">58 69 6E 20 63 68 C3 A0 6F</span> → thiếu 7 →
+      <b class="mono">58 69 6E 20 63 68 C3 A0 6F 07 07 07 07 07 07 07</b>. Lúc mở: đọc byte cuối là 7, bỏ 7 byte.</p></div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/utils.py</code><span>dòng 16–26</span></div>
+  <pre class="numbered"><span class="ln">16</span>def pkcs7_pad(data, block_size=BLOCK_SIZE):
+<span class="ln">17</span>    &#34;&#34;&#34;
+<span class="ln">18</span>    Đệm PKCS#7: thêm n byte, MỖI byte có giá trị n, sao cho tổng độ dài là bội của 8.
+<span class="ln">19</span>    Luôn thêm từ 1 đến 8 byte (dữ liệu tròn 8 byte vẫn thêm nguyên 1 khối 08 08 ... 08).
+<span class="ln">20</span>    VD: &#34;Xin chào&#34; = 9 byte  58 69 6E 20 63 68 C3 A0 6F
+<span class="ln">21</span>        9 % 8 = 1 -&gt; n = 8 - 1 = 7 -&gt; thêm 07 07 07 07 07 07 07 -&gt; 16 byte
+<span class="ln">22</span>        b&#34;&#34; (rỗng) -&gt; n = 8 -&gt; thêm 8 byte 08
+<span class="ln">23</span>    &#34;&#34;&#34;
+<span class="ln">24</span>    n = block_size - len(data) % block_size  # luôn thêm 1..8 byte
+<span class="ln">25</span>    #                                          &#34;%&#34; là phép chia lấy dư: 9 % 8 = 1, 16 % 8 = 0 (-&gt; n = 8)
+<span class="ln">26</span>    return data + bytes([n]) * n             # bytes([7]) = b&#39;\x07&#39;; &#34;* 7&#34; lặp lại 7 lần; &#34;+&#34; nối vào cuối
+</pre>
+</div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/utils.py</code><span>dòng 29–41</span></div>
+  <pre class="numbered"><span class="ln">29</span>def pkcs7_unpad(data, block_size=BLOCK_SIZE):
+<span class="ln">30</span>    &#34;&#34;&#34;
+<span class="ln">31</span>    Bỏ phần đệm: đọc byte cuối = n, kiểm tra n byte cuối đều bằng n, rồi cắt bỏ.
+<span class="ln">32</span>    VD: ... 6F 07 07 07 07 07 07 07 -&gt; byte cuối = 7 -&gt; bỏ 7 byte -&gt; &#34;Xin chào&#34;
+<span class="ln">33</span>    Nếu giải mã SAI KHÓA, dữ liệu là rác -&gt; byte cuối thường không hợp lệ -&gt; báo lỗi.
+<span class="ln">34</span>    &#34;&#34;&#34;
+<span class="ln">35</span>    if not data or len(data) % block_size:          # rỗng hoặc không chia hết cho 8 -&gt; không phải bản mã DES
+<span class="ln">36</span>        raise ValueError(&#34;Dữ liệu không phải bội số của 8 byte.&#34;)
+<span class="ln">37</span>    n = data[-1]                                    # data[-1]: phần tử CUỐI (với bytes là 1 số 0..255)
+<span class="ln">38</span>    # n phải từ 1..8, và n byte cuối (data[-n:]) phải đúng bằng n byte giá trị n
+<span class="ln">39</span>    if n &lt; 1 or n &gt; block_size or data[-n:] != bytes([n]) * n:
+<span class="ln">40</span>        raise ValueError(&#34;Padding sai - có thể do sai khóa hoặc file không phải bản mã DES.&#34;)
+<span class="ln">41</span>    return data[:-n]                                # data[:-n]: lấy tất cả TRỪ n byte cuối
+</pre>
+</div>
+</article>
+
+<article class="card cg binh" id="d4">
+  <header class="cg-head"><span class="scene-no">B4</span><div><h3>Mã 1 khối: IP → 16 vòng → đổi chỗ → IP⁻¹</h3><small>slide 74–76 · hàm crypt_block_verbose</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>Hoán vị khởi tạo, 16 vòng Feistel, đổi 2 nửa đầu cuối, hoán vị kết thúc.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4><p>Xáo chỗ 64 ô, cắt đôi, trộn 16 lần (dòng <code>left, right = right, left ^ feistel_f(right, k)</code> y hệt TinyDES), ghép phải trước trái sau, xáo ngược lại.</p></div>
+  </div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/des_core.py</code><span>dòng 140–170</span></div>
+  <pre class="numbered"><span class="ln">140</span>def crypt_block_verbose(block, subkeys):
+<span class="ln">141</span>    &#34;&#34;&#34;
+<span class="ln">142</span>    Mã hóa/giải mã 1 khối (8 bytes) kèm log từng vòng. Trả về (bytes, log).
+<span class="ln">143</span>    - Mã hóa: truyền subkeys = [K1..K16]
+<span class="ln">144</span>    - Giải mã: truyền subkeys = [K16..K1] (tức subkeys[::-1])
+<span class="ln">145</span>
+<span class="ln">146</span>    VD: block = 0123456789ABCDEF, khóa 133457799BBCDFF1
+<span class="ln">147</span>        IP     -&gt; L0 = CC00CCFF, R0 = F0AAF0AA
+<span class="ln">148</span>        Vòng 1 -&gt; L1 = F0AAF0AA, R1 = EF4A6544
+<span class="ln">149</span>        ...
+<span class="ln">150</span>        Vòng 16-&gt; L16 = 43423234, R16 = 0A4CD995
+<span class="ln">151</span>        IP⁻¹(R16‖L16) -&gt; 85E813540F0AB405
+<span class="ln">152</span>    &#34;&#34;&#34;
+<span class="ln">153</span>    log = []
+<span class="ln">154</span>    b = int.from_bytes(block, &#34;big&#34;)                # 8 byte -&gt; số 64 bit
+<span class="ln">155</span>    ip = permute(b, IP, 64)                         # hoán vị khởi tạo IP
+<span class="ln">156</span>    left, right = ip &gt;&gt; 32, ip &amp; 0xFFFFFFFF         # chia đôi: 32 bit trái, 32 bit phải
+<span class="ln">157</span>    log.append({&#34;vong&#34;: &#34;IP&#34;, &#34;l&#34;: f&#34;{left:08X}&#34;, &#34;r&#34;: f&#34;{right:08X}&#34;})
+<span class="ln">158</span>    for i, k in enumerate(subkeys, start=1):        # 16 vòng, i = 1..16, k = khóa con của vòng
+<span class="ln">159</span>        detail = {}
+<span class="ln">160</span>        left, right = right, left ^ feistel_f(right, k, detail)
+<span class="ln">161</span>        # Python tính HẾT vế phải trước rồi mới gán, nên:
+<span class="ln">162</span>        #   left mới  = right cũ                         (L_i = R_{i-1})
+<span class="ln">163</span>        #   right mới = left cũ XOR F(right cũ, K_i)     (R_i = L_{i-1} ⊕ F(R_{i-1}, K_i))
+<span class="ln">164</span>        log.append({&#34;vong&#34;: f&#34;Vòng {i}&#34;, &#34;k&#34;: f&#34;{k:012X}&#34;, &#34;l&#34;: f&#34;{left:08X}&#34;, &#34;r&#34;: f&#34;{right:08X}&#34;, **detail})
+<span class="ln">165</span>        #                                             **detail: trải các khóa e, xor, s, f của dict detail vào dict này
+<span class="ln">166</span>    out = permute((right &lt;&lt; 32) | left, IP_INV, 64)  # đảo L/R sau vòng 16
+<span class="ln">167</span>    # DES quy định sau vòng 16 KHÔNG tráo nữa. Vòng lặp trên đã lỡ tráo 1 lần,
+<span class="ln">168</span>    # nên ghép ngược lại thành R16‖L16 (right đứng trước) để hủy lần tráo thừa, rồi IP⁻¹.
+<span class="ln">169</span>    log.append({&#34;vong&#34;: &#34;IP⁻¹&#34;, &#34;out&#34;: f&#34;{out:016X}&#34;})
+<span class="ln">170</span>    return out.to_bytes(8, &#34;big&#34;), log              # số 64 bit -&gt; 8 byte
+</pre>
+</div>
+  <table class="log small cg-vars">
+    <tr><th>Lúc</th><th>left</th><th>right</th></tr>
+    
+    <tr><td>IP</td><td class="mono">CC00CCFF</td><td class="mono">F0AAF0AA</td></tr>
+    
+    <tr><td>Vòng 1</td><td class="mono">F0AAF0AA</td><td class="mono">EF4A6544</td></tr>
+    
+    <tr><td>Vòng 2</td><td class="mono">EF4A6544</td><td class="mono">CC017709</td></tr>
+    
+    <tr><td>Vòng 3</td><td class="mono">CC017709</td><td class="mono">A25C0BF4</td></tr>
+    
+    <tr><td>…</td><td colspan="2">13 vòng nữa</td></tr>
+    <tr><td>Vòng 16</td><td class="mono">43423234</td><td class="mono">0A4CD995</td></tr>
+    <tr class="io"><td>IP⁻¹ (R16‖L16) = out</td><td colspan="2" class="mono">85E813540F0AB405</td></tr>
+  </table>
+</article>
+
+<article class="card cg binh" id="d5">
+  <header class="cg-head"><span class="scene-no">B5</span><div><h3>Máy xay DES và 8 bảng tra</h3><small>slide 76–81 · hàm feistel_f, sbox_sub</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>F(Rᵢ₋₁, Kᵢ) = P-box(S-boxes(Expand(Rᵢ₋₁) ⊕ Kᵢ)). Expand 32 → 48 bít, S-boxes 48 → 32 bít (8 hộp, mỗi hộp 6 → 4), P-box hoán vị 32 bít.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4><p>Y hệt máy xay TinyDES, chỉ to hơn: cắt 48 ô thành 8 nhóm 6 ô, mỗi nhóm tra 1 bảng riêng (S1 … S8) bằng đúng cách “ô đầu + ô cuối = hàng, 4 ô giữa = cột”.</p></div>
+  </div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/des_core.py</code><span>dòng 120–137</span></div>
+  <pre class="numbered"><span class="ln">120</span>def feistel_f(r32, k48, detail=None):
+<span class="ln">121</span>    &#34;&#34;&#34;
+<span class="ln">122</span>    Hàm F của 1 vòng: F(R, K) = P( S( E(R) XOR K ) )
+<span class="ln">123</span>    detail: dict tùy chọn để lưu giá trị trung gian (phục vụ in log).
+<span class="ln">124</span>
+<span class="ln">125</span>    VD vòng 1: R0 = F0AAF0AA, K1 = 1B02EFFC7072
+<span class="ln">126</span>        E  -&gt; 7A15557A1555
+<span class="ln">127</span>        ⊕K -&gt; 6117BA866527
+<span class="ln">128</span>        S  -&gt; 5C82B597
+<span class="ln">129</span>        P  -&gt; f = 234AA9BB
+<span class="ln">130</span>    &#34;&#34;&#34;
+<span class="ln">131</span>    e = permute(r32, E, 32)     # mở rộng R từ 32 -&gt; 48 bit (một số bit được lặp lại)
+<span class="ln">132</span>    x = e ^ k48                 # &#34;^&#34; là XOR từng bit với khóa con
+<span class="ln">133</span>    s = sbox_sub(x)             # 48 -&gt; 32 bit qua 8 S-box
+<span class="ln">134</span>    f = permute(s, P, 32)       # hoán vị P (32 bit)
+<span class="ln">135</span>    if detail is not None:      # lưu lại để hiện trên web: E, XOR, S, f
+<span class="ln">136</span>        detail.update({&#34;e&#34;: f&#34;{e:012X}&#34;, &#34;xor&#34;: f&#34;{x:012X}&#34;, &#34;s&#34;: f&#34;{s:08X}&#34;, &#34;f&#34;: f&#34;{f:08X}&#34;})
+<span class="ln">137</span>    return f
+</pre>
+</div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/des_core.py</code><span>dòng 97–117</span></div>
+  <pre class="numbered"><span class="ln">97</span>def sbox_sub(x48):
+<span class="ln">98</span>    &#34;&#34;&#34;
+<span class="ln">99</span>    Cho 48 bit qua 8 S-box: mỗi nhóm 6 bit -&gt; 4 bit, tổng cộng ra 32 bit.
+<span class="ln">100</span>    Với nhóm 6 bit b1 b2 b3 b4 b5 b6: hàng = b1b6 (0..3), cột = b2b3b4b5 (0..15).
+<span class="ln">101</span>
+<span class="ln">102</span>    VD: x48 = 6117BA866527
+<span class="ln">103</span>        S1: 011000 -&gt; hàng 00=0, cột 1100=12 -&gt; S1[0][12] = 5
+<span class="ln">104</span>        S2: 010001 -&gt; hàng 01=1, cột 1000=8  -&gt; S2[1][8]  = C
+<span class="ln">105</span>        ... -&gt; kết quả 5C82B597
+<span class="ln">106</span>    &#34;&#34;&#34;
+<span class="ln">107</span>    out = 0
+<span class="ln">108</span>    for i in range(8):                              # i = 0..7 tương ứng S1..S8
+<span class="ln">109</span>        chunk = (x48 &gt;&gt; (42 - 6 * i)) &amp; 0x3F        # lấy nhóm 6 bit thứ i (0x3F = 0b111111)
+<span class="ln">110</span>        #                                             nhóm 0 nằm ở bit trên cùng nên dịch 42, nhóm 1 dịch 36, ..., nhóm 7 dịch 0
+<span class="ln">111</span>        row = ((chunk &gt;&gt; 4) &amp; 0b10) | (chunk &amp; 1)   # hàng = bit đầu (b1) và bit cuối (b6)
+<span class="ln">112</span>        #                                             chunk &gt;&gt; 4 còn &#34;b1 b2&#34;, &amp; 0b10 giữ b1 ở vị trí số 2; chunk &amp; 1 = b6
+<span class="ln">113</span>        #                                             VD chunk=011000: b1=0, b6=0 -&gt; row = 0
+<span class="ln">114</span>        col = (chunk &gt;&gt; 1) &amp; 0xF                    # cột = 4 bit giữa b2..b5 (bỏ b6, giữ 4 bit)
+<span class="ln">115</span>        #                                             VD 011000 &gt;&gt; 1 = 01100, &amp; 1111 = 1100 = 12
+<span class="ln">116</span>        out = (out &lt;&lt; 4) | S_BOX[i][row][col]       # tra S-box thứ i, ghép 4 bit kết quả vào cuối
+<span class="ln">117</span>    return out
+</pre>
+</div>
+  <div class="pipe">
+    <div><small>r32 (R0)</small><b class="mono">F0AAF0AA</b></div><span>→ E →</span>
+    <div><small>e</small><b class="mono">7A15557A1555</b></div><span>→ ⊕ K1 →</span>
+    <div><small>x</small><b class="mono">6117BA866527</b></div><span>→ 8 S-box →</span>
+    <div><small>s</small><b class="mono">5C82B597</b></div><span>→ P →</span>
+    <div class="out"><small>f</small><b class="mono">234AA9BB</b></div>
+  </div>
+  <p class="hint">Dòng khó nhất <code>row = ((chunk &gt;&gt; 4) &amp; 0b10) | (chunk &amp; 1)</code>: <code>chunk &gt;&gt; 4</code> còn 2 bit đầu, <code>&amp; 0b10</code> giữ bit đầu ở vị trí “số 2”, <code>chunk &amp; 1</code> lấy bit cuối, <code>|</code> ghép lại thành số hàng.</p>
+</article>
+
+<article class="card cg binh" id="d6">
+  <header class="cg-head"><span class="scene-no">B6</span><div><h3>Giải mã DES: chỉ khác <code>[::-1]</code></h3><small>hàm decrypt_block</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4><p>Chạy đúng máy mã hóa, nhưng đưa chìa theo thứ tự ngược K16 → K1. <code>[::-1]</code> là cách Python đảo ngược một danh sách.</p></div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/des_core.py</code><span>dòng 300–308</span></div>
+  <pre class="numbered"><span class="ln">300</span>def decrypt_block(block, key):
+<span class="ln">301</span>    &#34;&#34;&#34;
+<span class="ln">302</span>    Giải mã 1 khối 8 byte - CHỈ KHÁC mã hóa ở chỗ đảo ngược thứ tự khóa con.
+<span class="ln">303</span>    VD: decrypt_block(bytes.fromhex(&#34;85E813540F0AB405&#34;), bytes.fromhex(&#34;133457799BBCDFF1&#34;))
+<span class="ln">304</span>        -&gt; bytes.fromhex(&#34;0123456789ABCDEF&#34;)
+<span class="ln">305</span>    &#34;&#34;&#34;
+<span class="ln">306</span>    sk = prepare_keys(generate_subkeys(key)[::-1])  # giải mã = dùng khóa con theo thứ tự ngược
+<span class="ln">307</span>    #                                                 [::-1] đảo ngược list: [K1..K16] -&gt; [K16..K1]
+<span class="ln">308</span>    return crypt_block_fast(int.from_bytes(block, &#34;big&#34;), sk).to_bytes(8, &#34;big&#34;)
+</pre>
+</div>
+</article>
+
+<article class="card cg binh" id="d7">
+  <header class="cg-head"><span class="scene-no">B7</span><div><h3>Mã cả câu chữ / tệp bằng DES</h3><small>hàm des_encrypt_bytes</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4><p>Đệm → làm 16 chìa → mã từng khối 8 byte. “Xin chào” với khóa <span class="mono">nhom2026</span> → <b class="mono">EA 63 45 B5 94 48 F3 27 3B 7B 89 A3 C7 95 E4 14</b>.</p></div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/utils.py</code><span>dòng 97–102</span></div>
+  <pre class="numbered"><span class="ln">97</span>def des_encrypt_bytes(data, key):
+<span class="ln">98</span>    &#34;&#34;&#34;
+<span class="ln">99</span>    Mã hóa dữ liệu bất kỳ: đệm PKCS#7 rồi mã hóa từng khối.
+<span class="ln">100</span>    VD: des_encrypt_bytes(&#34;Xin chào&#34;.encode(), key) -&gt; 16 byte bản mã
+<span class="ln">101</span>    &#34;&#34;&#34;
+<span class="ln">102</span>    return _crypt_blocks(pkcs7_pad(data), des_core.generate_subkeys(key))
+</pre>
+</div>
+</article>
+
+<article class="card cg binh" id="d8">
+  <header class="cg-head"><span class="scene-no">B8</span><div><h3>Dụng cụ permute của DES (trên số nguyên)</h3><small>hàm des_core.permute</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4><p>Cùng việc với permute của TinyDES. Vì là số nên “lấy ô số pos” viết thành <code>(value &gt;&gt; (in_bits - pos)) &amp; 1</code>: dịch cho ô đó về cuối rồi giữ đúng 1 bit. Bảng của DES đếm từ 1 (slide đếm từ 0).</p></div>
+  <div class="codebox">
+  <div class="codebox-head"><code>core/des_core.py</code><span>dòng 23–40</span></div>
+  <pre class="numbered"><span class="ln">23</span>def permute(value, table, in_bits):
+<span class="ln">24</span>    &#34;&#34;&#34;
+<span class="ln">25</span>    Hoán vị bit: bit thứ i của kết quả = bit ở vị trí table[i] của value (đánh số từ 1).
+<span class="ln">26</span>    value   : số nguyên đầu vào, dài in_bits bit
+<span class="ln">27</span>    table   : danh sách vị trí cần lấy, VD IP, E, P, PC1, PC2
+<span class="ln">28</span>    in_bits : độ dài đầu vào (64, 56 hoặc 32)
+<span class="ln">29</span>    Kết quả dài len(table) bit -&gt; cùng 1 hàm vừa hoán vị, vừa rút gọn (PC1, PC2), vừa mở rộng (E).
+<span class="ln">30</span>
+<span class="ln">31</span>    VD: permute(0b1011, [2, 4, 3, 1], 4)
+<span class="ln">32</span>        đầu vào b1=1 b2=0 b3=1 b4=1 -&gt; lấy b2,b4,b3,b1 = 0,1,1,1 -&gt; 0b0111
+<span class="ln">33</span>    &#34;&#34;&#34;
+<span class="ln">34</span>    out = 0                                     # kết quả bắt đầu bằng 0, sẽ ghép dần từng bit vào cuối
+<span class="ln">35</span>    for pos in table:                           # duyệt từng vị trí trong bảng, VD pos = 2, rồi 4, rồi 3, rồi 1
+<span class="ln">36</span>        bit = (value &gt;&gt; (in_bits - pos)) &amp; 1    # dịch phải để bit thứ pos về cuối, &#34;&amp; 1&#34; giữ đúng bit đó
+<span class="ln">37</span>        #                                         VD value=1011, in_bits=4, pos=2: 1011 &gt;&gt; 2 = 10, &amp; 1 = 0
+<span class="ln">38</span>        out = (out &lt;&lt; 1) | bit                  # dịch out sang trái 1 chỗ rồi gắn bit mới vào cuối
+<span class="ln">39</span>        #                                         VD out=0 -&gt; 0, rồi 01, rồi 011, rồi 0111
+<span class="ln">40</span>    return out
+</pre>
+</div>
+</article>
+
+
+<h2 class="section-title">Phần C · Web: bấm nút thì code nào chạy (<code>app.py</code>)</h2>
+
+<article class="card cg" id="w1">
+  <header class="cg-head"><span class="scene-no">C1</span><div><h3>Trang TinyDES: bấm “Mã hóa”</h3><small>hàm sdes_demo</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4>
+    <p>Trình duyệt gửi các ô bạn gõ lên. <code>request.form.get("sdes_key")</code> lấy ô khóa. Hàm cắt dữ liệu thành khối 8 bit, gọi <code>tinydes_core.encrypt</code> cho từng khối, gom kết quả vào hộp <code>result</code>, ghi lịch sử, rồi <code>render("sdes.html", sdes=result)</code> trả trang web có kết quả.</p></div>
+  <div class="codebox">
+  <div class="codebox-head"><code>app.py</code><span>dòng 303–357</span></div>
+  <pre class="numbered"><span class="ln">303</span>@app.post(&#34;/sdes_demo&#34;)
+<span class="ln">304</span>def sdes_demo():
+<span class="ln">305</span>    # request.form.get(&#34;tên ô&#34;): lấy giá trị ô nhập có name=&#34;tên ô&#34; trong sdes.html
+<span class="ln">306</span>    key = request.form.get(&#34;sdes_key&#34;, &#34;&#34;).strip()          # VD &#34;10011010&#34;
+<span class="ln">307</span>    fmt = request.form.get(&#34;sdes_fmt&#34;, &#34;bin&#34;)               # &#34;bin&#34; hoặc &#34;text&#34;
+<span class="ln">308</span>    action = request.form.get(&#34;sdes_action&#34;, &#34;enc&#34;)         # nút nào được bấm: &#34;enc&#34; hoặc &#34;dec&#34;
+<span class="ln">309</span>    raw_input = request.form.get(&#34;sdes_input&#34;, &#34;&#34;)          # VD &#34;01011100&#34; hoặc &#34;Hello&#34;
+<span class="ln">310</span>    try:
+<span class="ln">311</span>        blocks = parse_sdes_data(raw_input, fmt, action == &#34;dec&#34;)   # -&gt; list khối 8 bit
+<span class="ln">312</span>        key_log = []
+<span class="ln">313</span>        keys = tinydes_core.generate_keys(key, key_log)     # B1: sinh K1, K2, K3 (khóa sai -&gt; ValueError)
+<span class="ln">314</span>
+<span class="ln">315</span>        # chọn hàm theo nút được bấm (hàm cũng là 1 giá trị, gán vào biến được)
+<span class="ln">316</span>        fn = tinydes_core.encrypt if action == &#34;enc&#34; else tinydes_core.decrypt
+<span class="ln">317</span>        out_blocks, block_logs = [], []
+<span class="ln">318</span>        t0 = time.perf_counter()                            # bấm giờ
+<span class="ln">319</span>        for i, blk in enumerate(blocks):
+<span class="ln">320</span>            out, log = fn(blk, key)                         # mã hóa/giải mã 1 khối, kèm log
+<span class="ln">321</span>            out_blocks.append(out)
+<span class="ln">322</span>            if i &lt; MAX_LOG_BLOCKS:
+<span class="ln">323</span>                # log[len(key_log):] bỏ phần sinh khóa ở đầu log (đã hiển thị riêng)
+<span class="ln">324</span>                block_logs.append({&#34;input&#34;: blk, &#34;output&#34;: out, &#34;steps&#34;: log[len(key_log):]})
+<span class="ln">325</span>
+<span class="ln">326</span>        elapsed = (time.perf_counter() - t0) * 1000         # giây -&gt; mili-giây
+<span class="ln">327</span>        out_bytes = bytes(int(b, 2) for b in out_blocks)    # [&#34;10010010&#34;, ...] -&gt; b&#39;\x92...&#39;
+<span class="ln">328</span>        traces = [tinydes_core.trace(b, key, decrypt=(action == &#34;dec&#34;)) for b in blocks[:MAX_LOG_BLOCKS]]
+<span class="ln">329</span>        result = {
+<span class="ln">330</span>            &#34;subkeys&#34;: keys, &#34;key_log&#34;: key_log, &#34;blocks&#34;: block_logs,
+<span class="ln">331</span>            &#34;total_blocks&#34;: len(blocks),
+<span class="ln">332</span>            &#34;out_bin&#34;: &#34; &#34;.join(out_blocks),                # VD &#34;10010010 01100111&#34;
+<span class="ln">333</span>            &#34;out_hex&#34;: out_bytes.hex(&#34; &#34;).upper(),          # VD &#34;92 67&#34;
+<span class="ln">334</span>            # giải mã thì thử đổi bytes -&gt; chữ; errors=&#34;replace&#34;: byte không hợp lệ thành dấu &#xFFFD;
+<span class="ln">335</span>            &#34;out_text&#34;: out_bytes.decode(&#34;utf-8&#34;, errors=&#34;replace&#34;) if action == &#34;dec&#34; else None,
+<span class="ln">336</span>            &#34;action&#34;: action, &#34;fmt&#34;: fmt,
+<span class="ln">337</span>            # Dữ liệu minh họa từng bit (sinh khóa, 3 vòng Feistel) cho vài khối đầu
+<span class="ln">338</span>            &#34;traces&#34;: traces,
+<span class="ln">339</span>        }
+<span class="ln">340</span>        # Dải luồng của khối đầu: Đầu vào -&gt; Vòng 1 -&gt; Vòng 2 -&gt; Vòng 3 (mã hóa) hoặc 3 -&gt; 2 -&gt; 1 (giải mã)
+<span class="ln">341</span>        first = traces[0]
+<span class="ln">342</span>        result[&#34;flow&#34;] = [(&#34;Đầu vào&#34;, first[&#34;input&#34;])] + [(f&#34;Vòng {r[&#39;n&#39;]}&#34;, r[&#34;output&#34;]) for r in first[&#34;rounds&#34;]]
+<span class="ln">343</span>        if action == &#34;enc&#34;:  # tự giải mã ngược để chứng minh D(E(P)) = P
+<span class="ln">344</span>            original = bytes(int(b, 2) for b in blocks)
+<span class="ln">345</span>            back = tinydes_core.decrypt_bytes(out_bytes, key)
+<span class="ln">346</span>            result[&#34;roundtrip&#34;] = {
+<span class="ln">347</span>                &#34;ok&#34;: back == original,
+<span class="ln">348</span>                &#34;bin&#34;: &#34; &#34;.join(format(b, &#34;08b&#34;) for b in back),
+<span class="ln">349</span>                &#34;text&#34;: back.decode(&#34;utf-8&#34;, errors=&#34;replace&#34;) if fmt == &#34;text&#34; else None,
+<span class="ln">350</span>            }
+<span class="ln">351</span>        db.add_history(&#34;TinyDES&#34;, action_name(action), raw_input,       # ghi lịch sử (KHÔNG ghi khóa)
+<span class="ln">352</span>                       result[&#34;out_text&#34;] if action == &#34;dec&#34; and fmt == &#34;text&#34; else result[&#34;out_hex&#34;],
+<span class="ln">353</span>                       len(out_bytes), round(elapsed, 3), note=f&#34;{len(blocks)} khối 8-bit&#34;)
+<span class="ln">354</span>        return render(&#34;sdes.html&#34;, sdes=result)             # trả trang sdes.html kèm kết quả
+<span class="ln">355</span>    except ValueError as e:                                 # nhập sai -&gt; hiện thông báo lỗi trên trang
+<span class="ln">356</span>        db.add_history(&#34;TinyDES&#34;, action_name(action), raw_input, status=&#34;error&#34;, note=str(e))
+<span class="ln">357</span>        return render(&#34;sdes.html&#34;, sdes_error=str(e))
+</pre>
+</div>
+</article>
+
+<article class="card cg" id="w2">
+  <header class="cg-head"><span class="scene-no">C2</span><div><h3>Phòng chat: An gửi tin</h3><small>hàm chat_send · gọi từ static/chat.js</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4>
+    <p>Trang chat không tải lại trang. JavaScript gửi JSON <code>{"algo", "key", "text"}</code> lên <code>/api/chat/send</code>.
+      Hàm lấy 2 cái máy (mã hóa, giải mã) từ <code>chat_cipher</code>, mã hóa tin của An, giải mã luôn bằng cùng khóa để ra tin Bình nhận, rồi trả JSON về. <code>weak</code> báo khóa yếu khi 3 chìa không khác nhau hết.</p></div>
+  <div class="codebox">
+  <div class="codebox-head"><code>app.py</code><span>dòng 730–754</span></div>
+  <pre class="numbered"><span class="ln">730</span>@app.post(&#34;/api/chat/send&#34;)
+<span class="ln">731</span>def chat_send():
+<span class="ln">732</span>    &#34;&#34;&#34;
+<span class="ln">733</span>    An gửi 1 tin. Trả về bản mã (thứ đi trên đường truyền) và tin Bình giải mã được.
+<span class="ln">734</span>    VD vào {&#34;algo&#34;: &#34;tinydes&#34;, &#34;key&#34;: &#34;11011010&#34;, &#34;text&#34;: &#34;Hello&#34;}
+<span class="ln">735</span>       ra  {&#34;ok&#34;: true, &#34;cipher_hex&#34;: &#34;43 61 DA DA C0&#34;, &#34;bob_text&#34;: &#34;Hello&#34;, &#34;weak&#34;: false, ...}
+<span class="ln">736</span>    &#34;&#34;&#34;
+<span class="ln">737</span>    data, algo, key = chat_json()
+<span class="ln">738</span>    text = str(data.get(&#34;text&#34;, &#34;&#34;))
+<span class="ln">739</span>    try:
+<span class="ln">740</span>        if not text:
+<span class="ln">741</span>            raise ValueError(&#34;An chưa gõ tin nhắn.&#34;)
+<span class="ln">742</span>        enc, dec = chat_cipher(algo, key)
+<span class="ln">743</span>        t0 = time.perf_counter()
+<span class="ln">744</span>        cipher = enc(text.encode(&#34;utf-8&#34;))                  # phía AN: chữ -&gt; byte -&gt; mã hóa
+<span class="ln">745</span>        bob = dec(cipher).decode(&#34;utf-8&#34;, errors=&#34;replace&#34;)  # phía BÌNH: giải mã bằng cùng khóa -&gt; chữ
+<span class="ln">746</span>        elapsed = (time.perf_counter() - t0) * 1000
+<span class="ln">747</span>        # Khóa TinyDES yếu: 3 khóa con không khác nhau hết (VD 11110000 -&gt; 3 khóa con giống hệt)
+<span class="ln">748</span>        weak = algo == &#34;tinydes&#34; and len(set(tinydes_core.generate_keys(key))) &lt; 3
+<span class="ln">749</span>        db.add_history(&#34;Chat&#34;, &#34;An gửi Bình&#34;, text, cipher.hex(&#34; &#34;).upper(), len(cipher), round(elapsed, 3),
+<span class="ln">750</span>                       note=&#34;TinyDES&#34; if algo == &#34;tinydes&#34; else &#34;DES&#34;)
+<span class="ln">751</span>        return jsonify(ok=True, cipher_hex=cipher.hex(&#34; &#34;).upper(), n_bytes=len(cipher), n_plain=len(text.encode(&#34;utf-8&#34;)),
+<span class="ln">752</span>                       bob_text=bob, elapsed=round(elapsed, 2), weak=weak)
+<span class="ln">753</span>    except ValueError as e:
+<span class="ln">754</span>        return jsonify(ok=False, error=str(e)), 400
+</pre>
+</div>
+</article>
+
+<article class="card cg eve" id="w3">
+  <header class="cg-head"><span class="scene-no">C3</span><div><h3>Phòng chat: kẻ xấu vét cạn và sửa tin</h3><small>hàm chat_attack, chat_tamper</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4>
+    <p><b>chat_attack</b>: chỉ dùng bản mã. TinyDES thì gọi lại A9 (thử 256 khóa). DES thì thử 2.000 khóa để đo tốc độ, rồi tính thử hết 2<sup>56</sup> khóa mất bao nhiêu năm.<br>
+      <b>chat_tamper</b>: đổi 1 bit (<code>cipher[index] ^= 0x01</code>) rồi cho Bình giải mã bản đã sửa. DES hỏng khối cuối thì <code>pkcs7_unpad</code> báo lỗi đệm.</p></div>
+  <div class="codebox">
+  <div class="codebox-head"><code>app.py</code><span>dòng 757–793</span></div>
+  <pre class="numbered"><span class="ln">757</span>@app.post(&#34;/api/chat/attack&#34;)
+<span class="ln">758</span>def chat_attack():
+<span class="ln">759</span>    &#34;&#34;&#34;
+<span class="ln">760</span>    Kẻ xấu vét cạn khóa. Chỉ dùng BẢN MÃ, không dùng khóa thật để tìm.
+<span class="ln">761</span>    (khóa thật chỉ được gửi lên để kiểm chứng &#34;kẻ xấu đoán đúng chưa&#34; vì đây là mô phỏng)
+<span class="ln">762</span>    TinyDES: thử đủ 256 khóa -&gt; thường đoán ra ngay.
+<span class="ln">763</span>    DES    : thử DES_TRY khóa để đo tốc độ, rồi tính cần bao lâu để thử hết 2^56 khóa.
+<span class="ln">764</span>    &#34;&#34;&#34;
+<span class="ln">765</span>    data, algo, key = chat_json()
+<span class="ln">766</span>    try:
+<span class="ln">767</span>        cipher = bytes.fromhex(str(data.get(&#34;cipher_hex&#34;, &#34;&#34;)))   # &#34;43 61 DA&#34; -&gt; b&#39;\x43\x61\xda&#39;
+<span class="ln">768</span>        if not cipher:
+<span class="ln">769</span>            raise ValueError(&#34;Không có bản mã để tấn công.&#34;)
+<span class="ln">770</span>        t0 = time.perf_counter()
+<span class="ln">771</span>        if algo == &#34;tinydes&#34;:
+<span class="ln">772</span>            top = tinydes_core.brute_force_ciphertext_only(cipher, top=3)
+<span class="ln">773</span>            elapsed = (time.perf_counter() - t0) * 1000
+<span class="ln">774</span>            guess = top[0]                                  # ứng viên điểm &#34;giống chữ&#34; cao nhất
+<span class="ln">775</span>            success = guess[&#34;key&#34;] == key
+<span class="ln">776</span>            db.add_history(&#34;Brute-force&#34;, &#34;Kẻ xấu vét cạn (chat)&#34;, data.get(&#34;cipher_hex&#34;), guess[&#34;key&#34;], len(cipher),
+<span class="ln">777</span>                           round(elapsed, 3), status=&#34;ok&#34; if success else &#34;error&#34;, note=&#34;TinyDES, 256 khóa&#34;)
+<span class="ln">778</span>            return jsonify(ok=True, algo=algo, tried=tinydes_core.KEY_SPACE, elapsed=round(elapsed, 2), success=success,
+<span class="ln">779</span>                           top=[{&#34;key&#34;: c[&#34;key&#34;], &#34;score&#34;: c[&#34;score&#34;],
+<span class="ln">780</span>                                 &#34;text&#34;: c[&#34;plain&#34;].decode(&#34;utf-8&#34;, errors=&#34;replace&#34;)} for c in top])
+<span class="ln">781</span>        # DES: chỉ giải mã thử khối đầu tiên với khóa 0, 1, 2, ... (mỗi lần phải sinh lại 16 khóa con)
+<span class="ln">782</span>        first = cipher[:8]
+<span class="ln">783</span>        for k in range(DES_TRY):
+<span class="ln">784</span>            des_core.decrypt_block(first, k.to_bytes(8, &#34;big&#34;))   # số k -&gt; 8 byte làm khóa thử
+<span class="ln">785</span>        elapsed = (time.perf_counter() - t0) * 1000
+<span class="ln">786</span>        per_sec = DES_TRY / (elapsed / 1000)                # tốc độ: số khóa thử được mỗi giây
+<span class="ln">787</span>        years = 2 ** 56 / per_sec / (3600 * 24 * 365)       # thời gian thử hết 2^56 khóa, đổi ra năm
+<span class="ln">788</span>        db.add_history(&#34;Brute-force&#34;, &#34;Kẻ xấu vét cạn (chat)&#34;, data.get(&#34;cipher_hex&#34;), &#34;không tìm thấy&#34;, len(cipher),
+<span class="ln">789</span>                       round(elapsed, 3), status=&#34;error&#34;, note=f&#34;DES, thử {DES_TRY} khóa&#34;)
+<span class="ln">790</span>        return jsonify(ok=True, algo=algo, tried=DES_TRY, elapsed=round(elapsed, 2), success=False,
+<span class="ln">791</span>                       per_sec=round(per_sec), years=years, total_keys=2 ** 56)
+<span class="ln">792</span>    except ValueError as e:
+<span class="ln">793</span>        return jsonify(ok=False, error=str(e)), 400
+</pre>
+</div>
+  <div class="codebox">
+  <div class="codebox-head"><code>app.py</code><span>dòng 824–848</span></div>
+  <pre class="numbered"><span class="ln">824</span>@app.post(&#34;/api/chat/tamper&#34;)
+<span class="ln">825</span>def chat_tamper():
+<span class="ln">826</span>    &#34;&#34;&#34;
+<span class="ln">827</span>    Kẻ xấu đổi 1 bit của byte thứ `index` trong bản mã rồi chuyển tiếp. Bình giải mã bản mã đã bị sửa.
+<span class="ln">828</span>    TinyDES: chỉ đúng 1 chữ bị hỏng (mỗi byte mã riêng).
+<span class="ln">829</span>    DES    : cả khối 8 byte chứa nó bị hỏng; nếu hỏng khối cuối thì thường báo lỗi đệm.
+<span class="ln">830</span>    &#34;&#34;&#34;
+<span class="ln">831</span>    data, algo, key = chat_json()
+<span class="ln">832</span>    try:
+<span class="ln">833</span>        cipher = bytearray(bytes.fromhex(str(data.get(&#34;cipher_hex&#34;, &#34;&#34;))))   # bytearray: sửa được từng byte
+<span class="ln">834</span>        if not cipher:
+<span class="ln">835</span>            raise ValueError(&#34;Không có bản mã để sửa.&#34;)
+<span class="ln">836</span>        index = int(data.get(&#34;index&#34;, 0)) % len(cipher)     # &#34;%&#34;: vị trí vượt quá độ dài thì quay vòng lại
+<span class="ln">837</span>        cipher[index] ^= 0x01                               # đổi đúng 1 bit cuối của byte đó (0 &lt;-&gt; 1)
+<span class="ln">838</span>        _, dec = chat_cipher(algo, key)
+<span class="ln">839</span>        try:
+<span class="ln">840</span>            bob, bob_error = dec(bytes(cipher)).decode(&#34;utf-8&#34;, errors=&#34;replace&#34;), None
+<span class="ln">841</span>        except ValueError as e:                             # DES: đệm sai -&gt; giải mã báo lỗi
+<span class="ln">842</span>            bob, bob_error = None, str(e)
+<span class="ln">843</span>        db.add_history(&#34;Chat&#34;, &#34;Kẻ xấu sửa tin&#34;, data.get(&#34;cipher_hex&#34;), bob or bob_error, len(cipher),
+<span class="ln">844</span>                       status=&#34;error&#34;, note=f&#34;Đổi 1 bit ở byte {index}&#34;)
+<span class="ln">845</span>        return jsonify(ok=True, cipher_hex=bytes(cipher).hex(&#34; &#34;).upper(), index=index,
+<span class="ln">846</span>                       bob_text=bob, bob_error=bob_error)
+<span class="ln">847</span>    except ValueError as e:
+<span class="ln">848</span>        return jsonify(ok=False, error=str(e)), 400
+</pre>
+</div>
+</article>
+
+
+<h2 class="section-title" id="cu-phap">Cú pháp Python gặp nhiều trong các đoạn trên</h2>
+<div class="card scroll">
+  <table class="log guide-table">
+    <tr><th>Viết</th><th>Nghĩa</th><th>Ví dụ</th></tr>
+    <tr><td class="mono">s[:4]  s[4:]</td><td>4 ký tự đầu / từ vị trí 4 đến hết</td><td class="mono">"01011100"[:4] = "0101"</td></tr>
+    <tr><td class="mono">a, b = x, y</td><td>bỏ vào 2 hộp cùng lúc</td><td class="mono">left, right = right, xor(left, f)</td></tr>
+    <tr><td class="mono">for i, s in enumerate(lst, start=1)</td><td>đi qua danh sách, có kèm số thứ tự</td><td class="mono">i = 1, 2, 3; s = 1, 2, 1</td></tr>
+    <tr><td class="mono">"".join(…)</td><td>nối nhiều ký tự thành 1 chuỗi</td><td class="mono">"".join(["0","1"]) = "01"</td></tr>
+    <tr><td class="mono">int("11", 2)</td><td>đọc chuỗi nhị phân ra số</td><td class="mono">3</td></tr>
+    <tr><td class="mono">format(8, "04b")</td><td>số ra nhị phân đủ 4 chữ số</td><td class="mono">"1000"</td></tr>
+    <tr><td class="mono">x &gt;&gt; n, x &lt;&lt; n</td><td>dịch bit phải / trái n chỗ</td><td class="mono">0b1011 &gt;&gt; 1 = 0b101</td></tr>
+    <tr><td class="mono">x &amp; 0x3F</td><td>giữ 6 bit cuối</td><td class="mono">lấy nhóm 6 bit cho S-box</td></tr>
+    <tr><td class="mono">a ^ b</td><td>XOR trên số</td><td class="mono">0b1011 ^ 0b0110 = 0b1101</td></tr>
+    <tr><td class="mono">lst[::-1]</td><td>đảo ngược danh sách</td><td class="mono">[K1..K16] → [K16..K1]</td></tr>
+    <tr><td class="mono">raise ValueError("…")</td><td>dừng hàm và báo lỗi</td><td>nhập khóa sai</td></tr>
+    <tr><td class="mono">try: … except ValueError as e:</td><td>thử chạy, lỗi thì xử lý thay vì sập</td><td>hiện lỗi đỏ trên trang</td></tr>
+  </table>
+</div>
+<p class="hint">Giải thích từng biến đầy đủ hơn có trong file <code>giaithich.md</code>, mục “Từ điển biến”.</p>
+
+  </main>
+  <footer>Đồ án DES &amp; TinyDES · An gửi Bình, kẻ xấu chặn giữa · thuật toán tự cài đặt, đối chiếu với pycryptodome</footer>
+</div>
+</body>
+</html>
