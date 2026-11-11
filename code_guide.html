@@ -1,0 +1,375 @@
+{#
+  TRANG ĐỌC CODE CÙNG THUẬT TOÁN (/doc-code)
+  Hàm tạo ra trang này: code_guide() trong app.py  ->  render("code_guide.html", src=..., ex=...)
+  Dữ liệu nhận:
+    src[tên] = mã nguồn THẬT của 1 hàm: {file, start, end, lines: [(số dòng, nội dung), ...]}
+               (lấy bằng inspect lúc mở trang, nên sửa code là trang tự đổi theo)
+    ex       = giá trị ví dụ tính thật bằng core/:
+               ex.tr        = tinydes_core.trace("01011100", "10011010") (mọi thanh ghi TinyDES)
+               ex.des_log   = log 16 vòng DES, ex.des_key_log = log C, D, K từng vòng ...
+  Cách đọc template (Jinja): xem đầu base.html.
+#}
+{% extends "base.html" %}
+{% set active = 'code_guide' %}
+{% block title %}Đọc code cùng thuật toán{% endblock %}
+{% block heading %}Đọc code cùng thuật toán{% endblock %}
+{% block subtitle %}Mỗi bước: slide nói gì → hiểu nôm na → đoạn code thật (kèm số dòng) → các biến đổi giá trị thế nào{% endblock %}
+
+{#
+  macro code(s): in 1 đoạn code thật kèm số dòng.
+  {%- ... -%}: dấu "-" xóa khoảng trắng thừa quanh lệnh Jinja để code trong <pre> không bị lệch dòng.
+#}
+{% macro code(s) -%}
+<div class="codebox">
+  <div class="codebox-head"><code>{{ s.file }}</code><span>dòng {{ s.start }}–{{ s.end }}</span></div>
+  <pre class="numbered">{%- for n, line in s.lines -%}<span class="ln">{{ n }}</span>{{ line }}
+{% endfor -%}</pre>
+</div>
+{%- endmacro %}
+
+{% set r1 = ex.tr.rounds[0] %}
+{% set ks = ex.tr.subkeys %}
+
+{% block content %}
+<nav class="card toc">
+  <b>Nhảy tới:</b>
+  <a href="#cach-doc">Cách đọc</a>
+  <a href="#ban-do">Bản đồ file</a>
+  <a href="#t1">TinyDES 1–9</a>
+  <a href="#d1">DES 1–8</a>
+  <a href="#w1">Web 1–3</a>
+  <a href="#cu-phap">Cú pháp Python</a>
+</nav>
+
+{# ================= Cách đọc ================= #}
+<section class="card" id="cach-doc">
+  <h2 class="card-title">Đọc trang này thế nào?</h2>
+  <div class="legend-grid">
+    <div class="lg slide"><b>Slide nói</b><small>Câu chữ trong tài liệu Chương 2, kèm số trang.</small></div>
+    <div class="lg plain-c"><b>Hiểu nôm na</b><small>Cùng ý đó, nói bằng lời thường, có ví dụ.</small></div>
+    <div class="lg code-c"><b>Code thật</b><small>Chép thẳng từ file lúc mở trang, số dòng bên trái là số dòng thật.</small></div>
+    <div class="lg var-c"><b>Các biến</b><small>Mỗi biến là một cái hộp có tên. Bảng ghi hộp đựng gì khi chạy ví dụ.</small></div>
+  </div>
+  <p class="hint">Ví dụ TinyDES: bản rõ <span class="mono">{{ ex.pt }}</span>, khóa <span class="mono">{{ ex.key }}</span> (bài tập slide 72).
+    Ví dụ DES: khối <span class="mono">0123456789ABCDEF</span>, khóa <span class="mono">133457799BBCDFF1</span>. Mọi con số do chính code tính ra lúc bạn mở trang.</p>
+  <div class="plain-box">
+    <p><b>3 điều cần biết trước khi đọc code Python:</b></p>
+    <p>1. <code>x = 5</code> nghĩa là <b>bỏ 5 vào hộp tên x</b>, không phải “x bằng 5” như toán. Gán lại thì giá trị cũ mất.</p>
+    <p>2. <code>def ten(a, b):</code> là <b>định nghĩa một cái máy</b> tên <code>ten</code>, nhận 2 thứ <code>a</code>, <code>b</code>. Các dòng thụt vào bên dưới là việc máy làm. <code>return</code> là thứ máy trả ra.</p>
+    <p>3. Chữ sau dấu <code>#</code> là <b>ghi chú</b> cho người đọc, máy bỏ qua. Code của nhóm có ghi chú kèm ví dụ ở gần như mọi dòng.</p>
+  </div>
+</section>
+
+{# ================= Bản đồ file ================= #}
+<section class="card" id="ban-do">
+  <h2 class="card-title">Bản đồ: file nào làm gì</h2>
+  <div class="map">
+    <div class="map-col">
+      <h3>Phần thuật toán <small>thư mục core/</small></h3>
+      <div class="map-file core"><code>tinydes_core.py</code><small>TinyDES: bảng luật, dụng cụ, làm 3 chìa, 3 vòng, mã câu chữ, bẻ khóa</small></div>
+      <div class="map-file core"><code>des_tables.py</code><small>Các bảng chuẩn của DES: IP, E, P, PC-1, PC-2, 8 S-box</small></div>
+      <div class="map-file core"><code>des_core.py</code><small>DES: làm 16 chìa, 16 vòng, bản dễ đọc và bản chạy nhanh</small></div>
+      <div class="map-file core"><code>utils.py</code><small>Đệm cho đủ 8 byte, chia khối, đọc khóa, đọc ghi tệp</small></div>
+    </div>
+    <div class="map-col">
+      <h3>Phần giao diện <small>không tự mã hóa</small></h3>
+      <div class="map-file ui"><code>app.py</code><small>Nhận dữ liệu từ trình duyệt, gọi core/, trả trang web về</small></div>
+      <div class="map-file ui"><code>templates/*.html</code><small>Khuôn các trang web, điền dữ liệu bằng {% raw %}{{ ... }}{% endraw %}</small></div>
+      <div class="map-file ui"><code>static/style.css</code>, <code>chat.js</code><small>Màu sắc, bố cục; phòng chat gọi API bằng JavaScript</small></div>
+      <div class="map-file ui"><code>db.py</code><small>Ghi lịch sử vào history.db (không ghi khóa)</small></div>
+    </div>
+  </div>
+  <p class="hint">Quy tắc vàng: <b>muốn hiểu thuật toán thì đọc core/</b>. app.py chỉ là bồi bàn: nhận order, đưa vào bếp (core/), mang món ra.</p>
+</section>
+
+{# =========================================================== #}
+<h2 class="section-title">Phần A · TinyDES trong <code>core/tinydes_core.py</code></h2>
+
+<article class="card cg" id="t1">
+  <header class="cg-head"><span class="scene-no">A1</span><div><h3>Bảng luật cố định</h3><small>slide 69, 70, 71</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4>
+      <p>Expand cho ra <i>b2 b3 b1 b2 b1 b0</i>. P-box cho ra <i>b2 b0 b3 b1</i>. Nén khóa thành <i>k5 k1 k3 k2 k7 k0</i>. Vòng 1, 2, 3 dịch vòng trái 1, 2, 1 bit.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4>
+      <p>Đây là “công thức nấu ăn” do người thiết kế đặt ra, không tính ra từ dữ liệu. Code chép y nguyên thành danh sách số.
+        Ví dụ <code>EXPAND = [2, 3, 1, 2, 1, 0]</code> đọc là: “lấy ô 2, rồi ô 3, rồi ô 1, rồi ô 2, rồi ô 1, rồi ô 0”.</p></div>
+  </div>
+  <table class="log small cg-vars">
+    <tr><th>Biến</th><th>Giá trị</th><th>Nghĩa</th></tr>
+    <tr><td class="mono">EXPAND</td><td class="mono">[2, 3, 1, 2, 1, 0]</td><td>Kéo 4 ô thành 6 ô</td></tr>
+    <tr><td class="mono">PBOX</td><td class="mono">[2, 0, 3, 1]</td><td>Xếp lại 4 ô</td></tr>
+    <tr><td class="mono">COMPRESS</td><td class="mono">[5, 1, 3, 2, 7, 0]</td><td>Chọn 6 trong 8 ô làm chìa (bỏ ô 4, ô 6)</td></tr>
+    <tr><td class="mono">SHIFTS</td><td class="mono">[1, 2, 1]</td><td>Vòng 1 xoay 1 ô, vòng 2 xoay 2 ô, vòng 3 xoay 1 ô</td></tr>
+    <tr><td class="mono">SBOX</td><td class="mono">4 hàng × 16 cột</td><td>Bảng tra. <code>SBOX[3][2]</code> = hàng 3, cột 2 = <b>{{ sbox[3][2] }}</b></td></tr>
+  </table>
+</article>
+
+<article class="card cg" id="t2">
+  <header class="cg-head"><span class="scene-no">A2</span><div><h3>3 dụng cụ dùng ở mọi bước: chép ô, xoay, so cặp</h3><small>dùng cho Expand, P-box, nén khóa, xoay khóa, XOR</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>Hoán vị, dịch vòng trái, và phép ⊕ (XOR).</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4>
+      <p><b>permute</b>: chép ô theo bảng. <code>permute("1100", EXPAND)</code> = <b>"001011"</b>.<br>
+        <b>left_shift</b>: ô đầu chạy ra cuối. <code>left_shift("1001", 1)</code> = <b>"0011"</b>.<br>
+        <b>xor</b>: so từng cặp, giống → 0, khác → 1. <code>xor("001011", "101110")</code> = <b>"100101"</b>.</p></div>
+  </div>
+  {{ code(src.permute) }}
+  {{ code(src.left_shift) }}
+  {{ code(src.xor) }}
+  <table class="log small cg-vars">
+    <tr><th>Biến</th><th>Là gì</th><th>Ví dụ</th></tr>
+    <tr><td class="mono">bits</td><td>Dãy ô đưa vào (chuỗi '0'/'1')</td><td class="mono">"1100"</td></tr>
+    <tr><td class="mono">table</td><td>Bảng luật: lấy ô số mấy</td><td class="mono">[2, 3, 1, 2, 1, 0]</td></tr>
+    <tr><td class="mono">i</td><td>Số ô đang lấy, chạy lần lượt theo table</td><td class="mono">2 → 3 → 1 → 2 → 1 → 0</td></tr>
+    <tr><td class="mono">bits[n:] / bits[:n]</td><td>Phần từ ô n đến hết / n ô đầu</td><td class="mono">"001" / "1"</td></tr>
+    <tr><td class="mono">x, y</td><td>1 cặp ký tự cùng vị trí (zip ghép 2 dãy)</td><td class="mono">"0", "1"</td></tr>
+  </table>
+</article>
+
+<article class="card cg" id="t3">
+  <header class="cg-head"><span class="scene-no">A3</span><div><h3>Làm 3 chìa K1, K2, K3</h3><small>slide 71 · hàm generate_keys</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4>
+      <p>Khóa K 8 bit chia thành KL0, KR0. Vòng 1 dịch vòng trái 1 bit, vòng 2 dịch 2 bit, vòng 3 dịch 1 bit. Kᵢ = nén KLᵢKRᵢ thành k5 k1 k3 k2 k7 k0.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4>
+      <p>Cắt khóa làm 2 nửa. Mỗi vòng: xoay <b>tiếp</b> cả 2 nửa, ghép lại 8 ô, chọn 6 ô làm chìa. Làm 3 lần ra 3 chìa.</p>
+      <p class="mini">Khóa <span class="mono">{{ ex.key }}</span> → K1 <b class="mono">{{ ks[0] }}</b>, K2 <b class="mono">{{ ks[1] }}</b>, K3 <b class="mono">{{ ks[2] }}</b></p></div>
+  </div>
+  {{ code(src.generate_keys) }}
+  <h4 class="cg-h">Các hộp thay đổi thế nào khi chạy</h4>
+  <table class="log small cg-vars">
+    <tr><th>Lúc</th><th>kl | kr</th><th>k (chìa vừa làm)</th><th>keys (giỏ chìa)</th></tr>
+    <tr><td>Sau dòng cắt đôi</td><td class="mono">{{ ex.key[:4] }} | {{ ex.key[4:] }}</td><td></td><td class="mono">[]</td></tr>
+    {% for i in range(3) %}
+    {% set st = ex.tr.key_steps[1 + 2 * i] %}
+    <tr><td>Vòng {{ i + 1 }} (i = {{ i + 1 }}, s = {{ [1, 2, 1][i] }})</td><td class="mono">{{ st.bits[:4] }} | {{ st.bits[4:] }}</td>
+      <td class="mono"><b>{{ ks[i] }}</b></td><td class="mono">{{ ks[:i + 1]|list }}</td></tr>
+    {% endfor %}
+  </table>
+  <p class="hint">Dòng <code>for i, s in enumerate(SHIFTS, start=1)</code>: đi qua từng số trong SHIFTS, bỏ số thứ tự vào hộp <code>i</code> (đếm từ 1), bỏ số đó vào hộp <code>s</code>.
+    Dòng <code>kl, kr = left_shift(kl, s), left_shift(kr, s)</code> ghi đè lên hộp cũ, nên vòng sau xoay <b>tiếp</b> từ kết quả vòng trước.</p>
+</article>
+
+<article class="card cg" id="t4">
+  <header class="cg-head"><span class="scene-no">A4</span><div><h3>Tra bảng S-box: 6 ô thành 4 ô</h3><small>slide 69–70 · hàm sbox_lookup</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>Hai bít b0b5 xác định hàng, bốn bít b1b2b3b4 xác định cột. Dựa vào bảng tính được 4 bít đầu ra.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4>
+      <p>Giống tra bảng cửu chương. Vào <span class="mono">{{ r1.sbox.in }}</span>: ô đầu + ô cuối = <span class="mono">{{ r1.sbox.in[0] }}{{ r1.sbox.in[5] }}</span> = hàng <b>{{ r1.sbox.row }}</b>;
+        4 ô giữa <span class="mono">{{ r1.sbox.in[1:5] }}</span> = cột <b>{{ r1.sbox.col }}</b>; ô đó ghi <b>{{ sbox[r1.sbox.row][r1.sbox.col] }}</b> → <b class="mono">{{ r1.sbox.out }}</b>.</p></div>
+  </div>
+  {{ code(src.sbox_lookup) }}
+  <table class="log small cg-vars">
+    <tr><th>Biến / biểu thức</th><th>Giá trị (vòng 1)</th><th>Nghĩa</th></tr>
+    <tr><td class="mono">bits6</td><td class="mono">"{{ r1.sbox.in }}"</td><td>6 ô đưa vào</td></tr>
+    <tr><td class="mono">bits6[0] + bits6[5]</td><td class="mono">"{{ r1.sbox.in[0] }}{{ r1.sbox.in[5] }}"</td><td>ô đầu ghép ô cuối</td></tr>
+    <tr><td class="mono">row = int(…, 2)</td><td class="mono">{{ r1.sbox.row }}</td><td>đọc chuỗi đó như số nhị phân</td></tr>
+    <tr><td class="mono">bits6[1:5]</td><td class="mono">"{{ r1.sbox.in[1:5] }}"</td><td>ô 1, 2, 3, 4 (cắt từ 1, dừng trước 5)</td></tr>
+    <tr><td class="mono">col</td><td class="mono">{{ r1.sbox.col }}</td><td>số cột</td></tr>
+    <tr><td class="mono">format(…, "04b")</td><td class="mono">"{{ r1.sbox.out }}"</td><td>đổi số ra 4 ô 0/1</td></tr>
+  </table>
+</article>
+
+<article class="card cg" id="t5">
+  <header class="cg-head"><span class="scene-no">A5</span><div><h3>Máy xay F: Expand → XOR chìa → S-box → P-box</h3><small>slide 68–70 · hàm f_function</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>F(R, K) = P-box( S-box( Expand(R) ⊕ K ) ).</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4><p>4 việc nối đuôi nhau, mỗi việc bỏ kết quả vào 1 hộp mới:
+      <span class="mono">half4</span> → <span class="mono">ex</span> → <span class="mono">x</span> → <span class="mono">s</span> → <span class="mono">f</span>.</p></div>
+  </div>
+  {{ code(src.f_function) }}
+  <div class="pipe">
+    <div><small>half4 (R0)</small><b class="mono">{{ r1.right }}</b></div><span>→ Expand →</span>
+    <div><small>ex</small><b class="mono">{{ r1.expand }}</b></div><span>→ ⊕ K1 {{ ks[0] }} →</span>
+    <div><small>x</small><b class="mono">{{ r1.xor }}</b></div><span>→ S-box →</span>
+    <div><small>s</small><b class="mono">{{ r1.sbox.out }}</b></div><span>→ P-box →</span>
+    <div class="out"><small>f (F)</small><b class="mono">{{ r1.f }}</b></div>
+  </div>
+</article>
+
+<article class="card cg" id="t6">
+  <header class="cg-head"><span class="scene-no">A6</span><div><h3>3 vòng trộn (vòng Feistel)</h3><small>slide 68 · hàm _encrypt_block</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>Lᵢ = Rᵢ₋₁ ; Rᵢ = Lᵢ₋₁ ⊕ F(Rᵢ₋₁, Kᵢ). Bản mã C = L3R3.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4><p>Hai bạn chuyền bóng: nửa phải vào máy xay, kết quả trộn vào nửa trái thành nửa phải mới; nửa phải cũ sang làm nửa trái. Cả câu đó là <b>1 dòng code</b>: <code>left, right = right, xor(left, f)</code>.</p></div>
+  </div>
+  {{ code(src.encrypt_block) }}
+  <h4 class="cg-h">Các hộp left, right qua từng vòng</h4>
+  <table class="log small cg-vars">
+    <tr><th>Lúc</th><th>k</th><th>f</th><th>left</th><th>right</th></tr>
+    <tr><td>Sau dòng cắt đôi</td><td></td><td></td><td class="mono">{{ ex.pt[:4] }}</td><td class="mono">{{ ex.pt[4:] }}</td></tr>
+    {% for r in ex.tr.rounds %}
+    <tr><td>Vòng {{ r.n }}</td><td class="mono">{{ r.k }}</td><td class="mono">{{ r.f }}</td><td class="mono">{{ r.output[:4] }}</td><td class="mono"><b>{{ r.output[4:] }}</b></td></tr>
+    {% endfor %}
+    <tr class="io"><td>return left + right</td><td colspan="4" class="mono">{{ ex.tr.output }}</td></tr>
+  </table>
+  <p class="hint">Vì sao viết 1 dòng mà không viết 2 dòng <code>left = right</code> rồi <code>right = xor(left, f)</code>? Vì Python tính <b>hết vế phải trước</b> bằng giá trị cũ, rồi mới bỏ vào 2 hộp cùng lúc. Viết 2 dòng thì dòng sau dùng nhầm <code>left</code> mới.</p>
+</article>
+
+<article class="card cg" id="t7">
+  <header class="cg-head"><span class="scene-no">A7</span><div><h3>Giải mã: đi ngược, chìa ngược</h3><small>slide 66 · hàm _decrypt_block</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>Rᵢ₋₁ = Lᵢ ; Lᵢ₋₁ = Rᵢ ⊕ F(Rᵢ₋₁, Kᵢ). Cuối cùng được P = (L0, R0).</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4><p>Nửa đưa vào máy xay được giữ nguyên, nên Bình tính lại được <b>đúng F</b>. Trộn F thêm lần nữa thì triệt tiêu. Chỉ cần đi vòng 3 → 1 với chìa K3 → K1. Dùng lại đúng hàm f_function, không cần hàm ngược.</p></div>
+  </div>
+  {{ code(src.decrypt_block) }}
+  <p class="hint"><code>range(3, 0, -1)</code> sinh ra 3, 2, 1. <code>keys[i - 1]</code> trừ 1 vì giỏ đánh số từ 0: K3 là <code>keys[2]</code>.</p>
+</article>
+
+<article class="card cg" id="t8">
+  <header class="cg-head"><span class="scene-no">A8</span><div><h3>Cửa ngõ encrypt() và mã cả câu chữ</h3><small>hàm encrypt, encrypt_bytes</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4>
+    <p><code>encrypt(P, K)</code> = kiểm tra đúng 8 bit → làm 3 chìa → 3 vòng → trả (bản mã, nhật ký). Câu chữ thì đổi từng chữ ra 1 byte (8 ô), mã từng byte bằng đúng 3 vòng trên:
+      <span class="mono">"Hello"</span> → <b class="mono">{{ ex.hello }}</b>.</p></div>
+  {{ code(src.encrypt) }}
+  {{ code(src.encrypt_bytes) }}
+  <p class="hint">Đọc dòng <code>bytes(int(_encrypt_block(format(b, "08b"), keys), 2) for b in data)</code> từ trong ra ngoài: số → 8 ô (<code>format</code>) → 3 vòng → số (<code>int(…, 2)</code>) → gom thành dãy byte.</p>
+</article>
+
+<article class="card cg eve" id="t9">
+  <header class="cg-head"><span class="scene-no">A9</span><div><h3>Kẻ xấu chỉ có bản mã: thử 256 khóa, chấm điểm</h3><small>hàm brute_force_ciphertext_only</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4>
+    <p>Với mỗi khóa trong 256 khóa: làm 3 chìa, giải mã thử, chấm điểm “giống chữ” (<code>readability_score</code>). Xếp từ cao xuống thấp, lấy vài khóa đầu. Khóa đúng ra câu có nghĩa nên đứng đầu.</p></div>
+  {{ code(src.brute_force_co) }}
+</article>
+
+{# =========================================================== #}
+<h2 class="section-title">Phần B · DES trong <code>core/des_core.py</code> và <code>core/utils.py</code></h2>
+<p class="hint">DES làm y hệt TinyDES nhưng dữ liệu là <b>số nguyên</b> (không phải chuỗi '0'/'1') để chạy nhanh. Nên code dùng phép toán bit:
+  <code>&gt;&gt;</code> dịch phải, <code>&lt;&lt;</code> dịch trái, <code>&amp;</code> lấy bớt bit, <code>|</code> ghép bit, <code>^</code> XOR.</p>
+
+<article class="card cg binh" id="d1">
+  <header class="cg-head"><span class="scene-no">B1</span><div><h3>Đọc khóa: 8 ký tự hoặc 16 hex → 8 byte</h3><small>hàm parse_des_key</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4><p>Gõ 16 ký tự hex thì cứ 2 ký tự là 1 byte. Gõ 8 chữ thường thì mỗi chữ là 1 byte theo bảng mã. Độ dài khác thì báo lỗi.</p></div>
+  {{ code(src.parse_des_key) }}
+</article>
+
+<article class="card cg binh" id="d2">
+  <header class="cg-head"><span class="scene-no">B2</span><div><h3>Làm 16 chìa: PC-1 → cắt đôi → xoay → PC-2</h3><small>slide 79 · hàm generate_subkeys</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>Khóa 64 bít rút trích thành 56 bít, chia KL0, KR0 mỗi nửa 28 bít. Vòng i dịch vòng trái rᵢ bít (1 nếu i ∈ {1, 2, 9, 16}, còn lại 2). Kᵢ = nén 56 bít thành 48 bít.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4><p>Giống TinyDES, thêm bước bỏ 8 ô thừa (PC-1) và làm 16 lần. <span class="mono">c</span>, <span class="mono">d</span> chính là KL, KR trên slide.</p></div>
+  </div>
+  {{ code(src.generate_subkeys) }}
+  {{ code(src.rotl) }}
+  <table class="log small cg-vars">
+    <tr><th>Lúc</th><th>c (hex)</th><th>d (hex)</th><th>k (hex)</th></tr>
+    {% for row in ex.des_key_log[:4] %}
+    <tr><td>{{ row.vong }}</td><td class="mono">{{ row.c }}</td><td class="mono">{{ row.d }}</td><td class="mono"><b>{{ row.k }}</b></td></tr>
+    {% endfor %}
+    <tr><td>…</td><td colspan="3">còn 13 vòng nữa, vòng 16: K16 = <b class="mono">{{ ex.k16 }}</b></td></tr>
+  </table>
+  <p class="hint"><code>c, d = k56 &gt;&gt; 28, k56 &amp; 0x0FFFFFFF</code>: <code>&gt;&gt; 28</code> đẩy bỏ 28 bit phải nên còn nửa trái; <code>&amp; 0x0FFFFFFF</code> (28 số 1) chỉ giữ 28 bit phải.</p>
+</article>
+
+<article class="card cg binh" id="d3">
+  <header class="cg-head"><span class="scene-no">B3</span><div><h3>Đệm cho đủ khối 8 byte (PKCS#7)</h3><small>hàm pkcs7_pad, pkcs7_unpad</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4>
+    <p>Thiếu n byte thì độn n byte, mỗi byte ghi số n. “Xin chào” = 9 byte <span class="mono">{{ ex.xin }}</span> → thiếu 7 →
+      <b class="mono">{{ ex.xin_pad }}</b>. Lúc mở: đọc byte cuối là 7, bỏ 7 byte.</p></div>
+  {{ code(src.pkcs7_pad) }}
+  {{ code(src.pkcs7_unpad) }}
+</article>
+
+<article class="card cg binh" id="d4">
+  <header class="cg-head"><span class="scene-no">B4</span><div><h3>Mã 1 khối: IP → 16 vòng → đổi chỗ → IP⁻¹</h3><small>slide 74–76 · hàm crypt_block_verbose</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>Hoán vị khởi tạo, 16 vòng Feistel, đổi 2 nửa đầu cuối, hoán vị kết thúc.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4><p>Xáo chỗ 64 ô, cắt đôi, trộn 16 lần (dòng <code>left, right = right, left ^ feistel_f(right, k)</code> y hệt TinyDES), ghép phải trước trái sau, xáo ngược lại.</p></div>
+  </div>
+  {{ code(src.crypt_block_verbose) }}
+  <table class="log small cg-vars">
+    <tr><th>Lúc</th><th>left</th><th>right</th></tr>
+    {% for row in ex.des_log[:4] %}
+    <tr><td>{{ row.vong }}</td><td class="mono">{{ row.l }}</td><td class="mono">{{ row.r }}</td></tr>
+    {% endfor %}
+    <tr><td>…</td><td colspan="2">13 vòng nữa</td></tr>
+    <tr><td>{{ ex.des_log[16].vong }}</td><td class="mono">{{ ex.des_log[16].l }}</td><td class="mono">{{ ex.des_log[16].r }}</td></tr>
+    <tr class="io"><td>IP⁻¹ (R16‖L16) = out</td><td colspan="2" class="mono">{{ ex.des_out }}</td></tr>
+  </table>
+</article>
+
+<article class="card cg binh" id="d5">
+  <header class="cg-head"><span class="scene-no">B5</span><div><h3>Máy xay DES và 8 bảng tra</h3><small>slide 76–81 · hàm feistel_f, sbox_sub</small></div></header>
+  <div class="cg-2">
+    <div class="cg-slide"><h4>Slide nói</h4><p>F(Rᵢ₋₁, Kᵢ) = P-box(S-boxes(Expand(Rᵢ₋₁) ⊕ Kᵢ)). Expand 32 → 48 bít, S-boxes 48 → 32 bít (8 hộp, mỗi hộp 6 → 4), P-box hoán vị 32 bít.</p></div>
+    <div class="cg-plain"><h4>Hiểu nôm na</h4><p>Y hệt máy xay TinyDES, chỉ to hơn: cắt 48 ô thành 8 nhóm 6 ô, mỗi nhóm tra 1 bảng riêng (S1 … S8) bằng đúng cách “ô đầu + ô cuối = hàng, 4 ô giữa = cột”.</p></div>
+  </div>
+  {{ code(src.feistel_f) }}
+  {{ code(src.sbox_sub) }}
+  <div class="pipe">
+    <div><small>r32 (R0)</small><b class="mono">{{ ex.des_log[0].r }}</b></div><span>→ E →</span>
+    <div><small>e</small><b class="mono">{{ ex.des_f1.e }}</b></div><span>→ ⊕ K1 →</span>
+    <div><small>x</small><b class="mono">{{ ex.des_f1.xor }}</b></div><span>→ 8 S-box →</span>
+    <div><small>s</small><b class="mono">{{ ex.des_f1.s }}</b></div><span>→ P →</span>
+    <div class="out"><small>f</small><b class="mono">{{ ex.des_f1.f }}</b></div>
+  </div>
+  <p class="hint">Dòng khó nhất <code>row = ((chunk &gt;&gt; 4) &amp; 0b10) | (chunk &amp; 1)</code>: <code>chunk &gt;&gt; 4</code> còn 2 bit đầu, <code>&amp; 0b10</code> giữ bit đầu ở vị trí “số 2”, <code>chunk &amp; 1</code> lấy bit cuối, <code>|</code> ghép lại thành số hàng.</p>
+</article>
+
+<article class="card cg binh" id="d6">
+  <header class="cg-head"><span class="scene-no">B6</span><div><h3>Giải mã DES: chỉ khác <code>[::-1]</code></h3><small>hàm decrypt_block</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4><p>Chạy đúng máy mã hóa, nhưng đưa chìa theo thứ tự ngược K16 → K1. <code>[::-1]</code> là cách Python đảo ngược một danh sách.</p></div>
+  {{ code(src.decrypt_block) }}
+</article>
+
+<article class="card cg binh" id="d7">
+  <header class="cg-head"><span class="scene-no">B7</span><div><h3>Mã cả câu chữ / tệp bằng DES</h3><small>hàm des_encrypt_bytes</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4><p>Đệm → làm 16 chìa → mã từng khối 8 byte. “Xin chào” với khóa <span class="mono">nhom2026</span> → <b class="mono">{{ ex.xin_enc }}</b>.</p></div>
+  {{ code(src.des_encrypt_bytes) }}
+</article>
+
+<article class="card cg binh" id="d8">
+  <header class="cg-head"><span class="scene-no">B8</span><div><h3>Dụng cụ permute của DES (trên số nguyên)</h3><small>hàm des_core.permute</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4><p>Cùng việc với permute của TinyDES. Vì là số nên “lấy ô số pos” viết thành <code>(value &gt;&gt; (in_bits - pos)) &amp; 1</code>: dịch cho ô đó về cuối rồi giữ đúng 1 bit. Bảng của DES đếm từ 1 (slide đếm từ 0).</p></div>
+  {{ code(src.des_permute) }}
+</article>
+
+{# =========================================================== #}
+<h2 class="section-title">Phần C · Web: bấm nút thì code nào chạy (<code>app.py</code>)</h2>
+
+<article class="card cg" id="w1">
+  <header class="cg-head"><span class="scene-no">C1</span><div><h3>Trang TinyDES: bấm “Mã hóa”</h3><small>hàm sdes_demo</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4>
+    <p>Trình duyệt gửi các ô bạn gõ lên. <code>request.form.get("sdes_key")</code> lấy ô khóa. Hàm cắt dữ liệu thành khối 8 bit, gọi <code>tinydes_core.encrypt</code> cho từng khối, gom kết quả vào hộp <code>result</code>, ghi lịch sử, rồi <code>render("sdes.html", sdes=result)</code> trả trang web có kết quả.</p></div>
+  {{ code(src.sdes_demo) }}
+</article>
+
+<article class="card cg" id="w2">
+  <header class="cg-head"><span class="scene-no">C2</span><div><h3>Phòng chat: An gửi tin</h3><small>hàm chat_send · gọi từ static/chat.js</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4>
+    <p>Trang chat không tải lại trang. JavaScript gửi JSON <code>{"algo", "key", "text"}</code> lên <code>/api/chat/send</code>.
+      Hàm lấy 2 cái máy (mã hóa, giải mã) từ <code>chat_cipher</code>, mã hóa tin của An, giải mã luôn bằng cùng khóa để ra tin Bình nhận, rồi trả JSON về. <code>weak</code> báo khóa yếu khi 3 chìa không khác nhau hết.</p></div>
+  {{ code(src.chat_send) }}
+</article>
+
+<article class="card cg eve" id="w3">
+  <header class="cg-head"><span class="scene-no">C3</span><div><h3>Phòng chat: kẻ xấu vét cạn và sửa tin</h3><small>hàm chat_attack, chat_tamper</small></div></header>
+  <div class="cg-plain wide"><h4>Hiểu nôm na</h4>
+    <p><b>chat_attack</b>: chỉ dùng bản mã. TinyDES thì gọi lại A9 (thử 256 khóa). DES thì thử 2.000 khóa để đo tốc độ, rồi tính thử hết 2<sup>56</sup> khóa mất bao nhiêu năm.<br>
+      <b>chat_tamper</b>: đổi 1 bit (<code>cipher[index] ^= 0x01</code>) rồi cho Bình giải mã bản đã sửa. DES hỏng khối cuối thì <code>pkcs7_unpad</code> báo lỗi đệm.</p></div>
+  {{ code(src.chat_attack) }}
+  {{ code(src.chat_tamper) }}
+</article>
+
+{# =========================================================== #}
+<h2 class="section-title" id="cu-phap">Cú pháp Python gặp nhiều trong các đoạn trên</h2>
+<div class="card scroll">
+  <table class="log guide-table">
+    <tr><th>Viết</th><th>Nghĩa</th><th>Ví dụ</th></tr>
+    <tr><td class="mono">s[:4]  s[4:]</td><td>4 ký tự đầu / từ vị trí 4 đến hết</td><td class="mono">"01011100"[:4] = "0101"</td></tr>
+    <tr><td class="mono">a, b = x, y</td><td>bỏ vào 2 hộp cùng lúc</td><td class="mono">left, right = right, xor(left, f)</td></tr>
+    <tr><td class="mono">for i, s in enumerate(lst, start=1)</td><td>đi qua danh sách, có kèm số thứ tự</td><td class="mono">i = 1, 2, 3; s = 1, 2, 1</td></tr>
+    <tr><td class="mono">"".join(…)</td><td>nối nhiều ký tự thành 1 chuỗi</td><td class="mono">"".join(["0","1"]) = "01"</td></tr>
+    <tr><td class="mono">int("11", 2)</td><td>đọc chuỗi nhị phân ra số</td><td class="mono">3</td></tr>
+    <tr><td class="mono">format(8, "04b")</td><td>số ra nhị phân đủ 4 chữ số</td><td class="mono">"1000"</td></tr>
+    <tr><td class="mono">x &gt;&gt; n, x &lt;&lt; n</td><td>dịch bit phải / trái n chỗ</td><td class="mono">0b1011 &gt;&gt; 1 = 0b101</td></tr>
+    <tr><td class="mono">x &amp; 0x3F</td><td>giữ 6 bit cuối</td><td class="mono">lấy nhóm 6 bit cho S-box</td></tr>
+    <tr><td class="mono">a ^ b</td><td>XOR trên số</td><td class="mono">0b1011 ^ 0b0110 = 0b1101</td></tr>
+    <tr><td class="mono">lst[::-1]</td><td>đảo ngược danh sách</td><td class="mono">[K1..K16] → [K16..K1]</td></tr>
+    <tr><td class="mono">raise ValueError("…")</td><td>dừng hàm và báo lỗi</td><td>nhập khóa sai</td></tr>
+    <tr><td class="mono">try: … except ValueError as e:</td><td>thử chạy, lỗi thì xử lý thay vì sập</td><td>hiện lỗi đỏ trên trang</td></tr>
+  </table>
+</div>
+<p class="hint">Giải thích từng biến đầy đủ hơn có trong file <code>giaithich.md</code>, mục “Từ điển biến”.</p>
+{% endblock %}
