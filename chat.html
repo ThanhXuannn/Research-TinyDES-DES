@@ -1,12 +1,103 @@
-{# chat.html: phòng chat (/chat), do chat() render. Mọi thao tác (gửi tin, vét cạn, chọn bản rõ, sửa tin) do static/chat.js gọi các API /api/chat/*. #}
-{% extends "base.html" %}
-{% set active = 'chat' %}
-{% block title %}An gửi Bình{% endblock %}
-{% block heading %}An gửi tin cho Bình, kẻ xấu chặn giữa{% endblock %}
-{% block subtitle %}Mỗi tin được mã hóa thật bằng thuật toán nhóm tự viết. Gửi thử vài tin, rồi đóng vai kẻ xấu: vét cạn khóa, tấn công chọn bản rõ hoặc sửa tin.{% endblock %}
 
-{% block content %}
-{# 3 nhân vật #}
+
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>An gửi Bình · DES &amp; TinyDES</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+
+
+<aside class="sidebar">
+
+  <a class="brand" href="index.html">
+    <span><b>Mật thư An–Bình</b><small>Đồ án DES &amp; TinyDES</small></span>
+  </a>
+  <nav>
+
+    
+      
+    <span class="nav-group">Bắt đầu</span>
+      
+    
+      
+    <a href="index.html" class="">
+      Trang chủ
+    </a>
+      
+    
+      
+    <a href="huong-dan.html" class="">
+      Hướng dẫn
+    </a>
+      
+    
+      
+    <a href="chat.html" class="active">
+      Demo: An gửi Bình
+    </a>
+      
+    
+      
+    <span class="nav-group">Thuật toán</span>
+      
+    
+      
+    <a href="tinydes.html" class="">
+      TinyDES từng bước
+    </a>
+      
+    
+      
+    <a href="des.html" class="">
+      DES: văn bản &amp; tệp
+    </a>
+      
+    
+      
+    <a href="doc-code.html" class="">
+      Đọc code cùng thuật toán
+    </a>
+      
+    
+      
+    <span class="nav-group">Bản đầy đủ</span>
+    <a href="ban-day-du.html" class="">Tấn công, kiểm thử, đo thời gian</a>
+      
+    
+  </nav>
+
+  <div class="side-foot">
+    <span class="who an">An · gửi</span>
+    <span class="who binh">Bình · nhận</span>
+    <span class="who eve">Kẻ xấu · chặn giữa</span>
+  </div>
+</aside>
+
+
+<div class="content">
+
+  <header class="page-head">
+    <div>
+      <h1>An gửi tin cho Bình, kẻ xấu chặn giữa</h1>
+      <p>Mỗi tin được mã hóa thật bằng thuật toán nhóm tự viết. Gửi thử vài tin, rồi đóng vai kẻ xấu: vét cạn khóa, tấn công chọn bản rõ hoặc sửa tin.</p>
+    </div>
+
+    
+  </header>
+  <main>
+
+    
+
 <section class="story">
   <div class="role an">
     <span class="avatar">A</span>
@@ -22,7 +113,7 @@
   </div>
 </section>
 
-{# Khóa bí mật chung của An và Bình #}
+
 <section class="card secret-bar">
   <div class="secret-text">
     <h2 class="card-title">Khóa bí mật chung của An và Bình</h2>
@@ -40,7 +131,7 @@
   <p class="warn-line" id="keyWarn" hidden></p>
 </section>
 
-{# Sân khấu: điện thoại An | đường truyền (kẻ xấu) | điện thoại Bình #}
+
 <section class="chat-stage">
   <div class="phone an">
     <header><span class="avatar">A</span><div><b>An</b><small>người gửi</small></div></header>
@@ -65,3 +156,46 @@
     <div class="msgs" id="binhMsgs">
       <p class="msgs-empty">Tin An gửi sẽ hiện ở đây sau khi Bình giải mã.</p>
     </div>
+  </div>
+</section>
+<p class="error" id="chatError" hidden></p>
+
+
+<h2 class="section-title">Phòng thủ: An và Bình nên làm gì?</h2>
+<section class="defense">
+  <div class="card def">
+    <h3>1. Dùng khóa dài hơn</h3>
+    <p>TinyDES chỉ có <b>256</b> khóa, kẻ xấu thử hết trong tích tắc. DES có 2<sup>56</sup> ≈ <b>72 triệu tỷ</b> khóa.
+      Đổi sang DES, gửi lại, rồi bấm “Vét cạn khóa” để xem kẻ xấu cần bao nhiêu năm.</p>
+    <button class="btn small" type="button" data-def="des">Đổi sang DES</button>
+    <p class="hint">Máy tính thường thì không kịp, nhưng máy chuyên dụng đã phá DES năm 1998. Ngày nay người ta dùng AES (slide 84).</p>
+  </div>
+  <div class="card def">
+    <h3>2. Tránh khóa yếu</h3>
+    <p>Có những khóa TinyDES làm 3 chìa con giống nhau, các vòng trộn không khác gì nhau. Ví dụ <span class="mono">11110000</span>.</p>
+    <button class="btn small" type="button" data-def="weak">Thử khóa yếu 11110000</button>
+  </div>
+  <div class="card def">
+    <h3>3. Mã hóa không chặn được việc sửa tin</h3>
+    <p>Bấm “Sửa 1 bit rồi chuyển” ở một gói tin. Bình vẫn nhận được tin, chỉ là tin <b>hỏng</b>, và không chắc chắn biết bị ai sửa.
+      Muốn phát hiện sửa tin phải thêm <b>mã chứng thực MAC</b> (slide 85).</p>
+  </div>
+  <div class="card def">
+    <h3>4. Tin giống nhau thì bản mã giống nhau</h3>
+    <p>Gửi lại đúng tin cũ: bản mã giống hệt, kẻ xấu biết ngay “An vừa nói lại câu đó”, dù không đọc được. Đó là điểm yếu của cách mã từng khối riêng (ECB).</p>
+    <button class="btn small" type="button" data-def="repeat">Gửi lại tin vừa rồi</button>
+  </div>
+  <div class="card def">
+    <h3>5. Dùng khối lớn để không lập được bảng tra</h3>
+    <p>Bấm “Tấn công chọn bản rõ”: TinyDES mã từng khối 8 bit, chỉ có 256 bản rõ, kẻ xấu mượn hộp đen một lúc là lập xong bảng tra.
+      DES mã khối 64 bit, bảng tra cần 2<sup>64</sup> dòng, không thể lập.</p>
+  </div>
+</section>
+
+<script src="crypto-local.js"></script><script src="chat.js"></script>
+
+  </main>
+  <footer>Đồ án DES &amp; TinyDES · An gửi Bình, kẻ xấu chặn giữa · thuật toán tự cài đặt, đối chiếu với pycryptodome</footer>
+</div>
+</body>
+</html>
