@@ -1,0 +1,523 @@
+{#
+  TRANG HƯỚNG DẪN (/huong-dan)
+  Hàm tạo ra trang này: guide() trong app.py  ->  render("guide.html")
+  Nội dung tĩnh, chỉ nói về phần web: app.py (Flask), templates/*.html (Jinja), static/*.js,
+  1 lần bấm nút đi qua những đâu, phòng chat gửi tin bằng gì, trang nào gọi hàm nào.
+  Cách đọc template (Jinja): xem đầu base.html.
+#}
+{% extends "base.html" %}
+{% set active = 'guide' %}
+{% block title %}Hướng dẫn{% endblock %}
+{% block heading %}Hướng dẫn: website chạy như thế nào{% endblock %}
+{% block subtitle %}Chỉ phần web: app.py (Flask) nhận yêu cầu, HTML trong templates/ hiện trang, JavaScript trong static/ lo phòng chat và trình chiếu{% endblock %}
+
+{% block content %}
+<nav class="card toc">
+  <b>Nhảy tới:</b>
+  <a href="#tong-quan">Tổng quan</a>
+  <a href="#chay">Cách chạy</a>
+  <a href="#mot-lan-bam">Một lần bấm nút</a>
+  <a href="#app">app.py</a>
+  <a href="#html">HTML (Jinja)</a>
+  <a href="#tung-trang">Từng trang HTML</a>
+  <a href="#js">JavaScript</a>
+  <a href="#chat">Phòng chat</a>
+  <a href="#bang-trang">Trang nào gọi hàm nào</a>
+  <a href="#nut-thuat-toan">Nút nào chạy hàm thuật toán nào</a>
+  <a href="#su-co">Sự cố</a>
+</nav>
+
+{# ============ Tổng quan ============ #}
+<section class="card" id="tong-quan">
+  <h2 class="card-title">Tổng quan: web gồm 2 nửa</h2>
+  <pre class="tree">TRÌNH DUYỆT (Chrome, Edge...)                     MÁY CHỦ PYTHON (python app.py)
+┌──────────────────────────────┐   yêu cầu HTTP   ┌──────────────────────────────────┐
+│ HTML   templates/*.html      │ ───────────────► │ app.py   Flask: nhận yêu cầu,     │
+│ CSS    static/style.css      │                  │          gọi thuật toán           │
+│ JS     static/chat.js        │ ◄─────────────── │ core/    TinyDES, DES, tấn công    │
+│        static/present.js     │  trang HTML/JSON │ db.py    ghi lịch sử vào history.db│
+└──────────────────────────────┘                  └──────────────────────────────────┘</pre>
+  <table class="log">
+    <tr><th>Phần</th><th>Nằm ở</th><th>Làm gì</th></tr>
+    <tr><td>HTML</td><td><code>templates/</code></td><td>Khung trang: menu, form nhập, bảng kết quả. Có chỗ trống <code>{{ '{{ ... }}' }}</code> để Python điền số liệu vào.</td></tr>
+    <tr><td>CSS</td><td><code>static/style.css</code></td><td>Màu, cỡ chữ, bố cục. Không có logic gì.</td></tr>
+    <tr><td>JavaScript</td><td><code>static/chat.js</code>, <code>static/present.js</code></td><td>Chạy trong trình duyệt. <code>chat.js</code> gửi tin của phòng chat lên máy chủ mà không tải lại trang. <code>present.js</code> là nút “Trình chiếu từng bước”.</td></tr>
+    <tr><td>app.py (Python)</td><td><code>app.py</code></td><td>Dùng thư viện <b>Flask</b>. Mỗi địa chỉ (VD <code>/sdes_demo</code>) gắn với 1 hàm. Hàm đọc dữ liệu nhập, gọi <code>core/</code>, trả về trang.</td></tr>
+    <tr><td>Lưu trữ</td><td><code>db.py</code>, <code>history.db</code></td><td>SQLite: mỗi lần bấm nút ghi 1 dòng lịch sử (trang Lịch sử).</td></tr>
+  </table>
+  <p class="hint">Trang này chỉ nói phần web. Việc mã hóa nằm trong <code>core/</code>: <code>app.py</code> chỉ gọi vào đó và không tự mã hóa gì.
+    HTML và JavaScript chỉ để nhập dữ liệu và hiển thị kết quả.</p>
+</section>
+
+{# ============ Cách chạy ============ #}
+<section class="card" id="chay">
+  <h2 class="card-title">Cách chạy</h2>
+  <ol class="clean steps">
+    <li>Mở terminal ở thư mục đồ án.</li>
+    <li>Lần đầu: tạo môi trường ảo <code>python -m venv .venv</code>.</li>
+    <li>Bật môi trường ảo: <code>source .venv/bin/activate</code> (Windows: <code>.venv\Scripts\activate</code>).</li>
+    <li>Lần đầu: cài thư viện <code>pip install -r requirements.txt</code> (Flask và pycryptodome; pycryptodome chỉ để so sánh).</li>
+    <li>Chạy <code>python app.py</code>, chờ dòng <code>Running on http://127.0.0.1:5000</code>.</li>
+    <li>Mở trình duyệt vào <code>http://127.0.0.1:5000</code>. Tắt máy chủ: <kbd>Ctrl</kbd> + <kbd>C</kbd>.</li>
+  </ol>
+  <p class="hint">Khi chạy <code>python app.py</code>, Python đọc file từ trên xuống, đăng ký các địa chỉ <code>@app.get</code> / <code>@app.post</code>,
+    rồi <code>app.run()</code> bật máy chủ và <b>đứng chờ</b>. Trình duyệt vào địa chỉ nào thì hàm gắn với địa chỉ đó mới chạy.</p>
+</section>
+
+{# ============ Một lần bấm nút ============ #}
+<section class="card" id="mot-lan-bam">
+  <h2 class="card-title">Một lần bấm nút đi qua những đâu</h2>
+  <p>Ví dụ: ở trang <a href="{{ url_for('sdes_page') }}">TinyDES từng bước</a>, nhập bản rõ <span class="mono">01011100</span>,
+    khóa <span class="mono">10011010</span>, bấm <b>Mã hóa</b>.</p>
+  <ol class="clean steps">
+    <li><b>HTML</b> (<code>templates/sdes.html</code>): form có <code>method="post" action="/sdes_demo"</code>.
+      Bấm nút thì trình duyệt gửi các ô nhập lên máy chủ:
+      <div class="mono">sdes_key=10011010 &amp; sdes_fmt=bin &amp; sdes_input=01011100 &amp; sdes_action=enc</div></li>
+    <li><b>Flask</b> (<code>app.py</code>) thấy địa chỉ <code>/sdes_demo</code> → chạy hàm <code>sdes_demo()</code>.
+      Hàm đọc từng ô bằng <code>request.form.get("sdes_key")</code>.</li>
+    <li><code>sdes_demo()</code> gọi hàm mã hóa trong <code>core/</code>, nhận về bản mã <span class="mono">10010010</span> và các bước trung gian.</li>
+    <li><b>Lịch sử</b> (<code>db.py</code>): <code>db.add_history(...)</code> ghi 1 dòng vào <code>history.db</code>.</li>
+    <li><b>Trả trang</b>: <code>render("sdes.html", sdes=kết_quả)</code>. Jinja mở lại <code>sdes.html</code>, điền
+      <code>{{ '{{ sdes.out_bin }}' }}</code> thành <span class="mono">10010010</span>, gửi trang HTML hoàn chỉnh về trình duyệt.</li>
+    <li>Trình duyệt <b>tải lại cả trang</b> và hiện kết quả.</li>
+  </ol>
+  <p class="hint">Mọi trang có form (TinyDES, DES, Tấn công, Đo thời gian, Kiểm thử) đều chạy theo đúng 6 bước này.
+    Riêng phòng chat không tải lại trang, xem mục <a href="#chat">Phòng chat</a>.</p>
+</section>
+
+{# ============ app.py ============ #}
+<section class="card" id="app">
+  <h2 class="card-title">app.py: máy chủ web (Flask)</h2>
+  <p>Mỗi địa chỉ web gắn với 1 hàm Python bằng một dòng <code>@app.get</code> hoặc <code>@app.post</code> đặt ngay trên hàm:</p>
+  <pre class="code">app = Flask(__name__)                    <span class="cm">tạo web; Flask tự tìm templates/ và static/</span>
+
+@app.get("/sdes")                        <span class="cm">mở trang (GET): chỉ trả form trống</span>
+def sdes_page():
+    return render("sdes.html")
+
+@app.post("/sdes_demo")                  <span class="cm">form gửi lên (POST)</span>
+def sdes_demo():
+    key = request.form.get("sdes_key")   <span class="cm">đọc ô có name="sdes_key"</span>
+    ...                                  <span class="cm">gọi core/ để mã hóa</span>
+    db.add_history(...)                  <span class="cm">ghi lịch sử</span>
+    return render("sdes.html", sdes=kết_quả)   <span class="cm">trả trang HTML có kết quả</span>
+
+@app.post("/api/chat/send")              <span class="cm">API cho JavaScript</span>
+def chat_send():
+    data = request.get_json()            <span class="cm">đọc JSON chat.js gửi lên</span>
+    ...
+    return jsonify(ok=True, cipher_hex=..., bob_text=...)   <span class="cm">trả JSON, không trả HTML</span></pre>
+  <table class="log small">
+    <tr><th>Thứ dùng trong app.py</th><th>Để làm gì</th></tr>
+    <tr><td><code>request.form</code> / <code>request.args</code></td><td>Đọc ô nhập của form (POST) / tham số trên URL (GET)</td></tr>
+    <tr><td><code>request.files</code></td><td>Đọc tệp người dùng chọn (trang DES)</td></tr>
+    <tr><td><code>request.get_json()</code></td><td>Đọc JSON do <code>chat.js</code> gửi lên</td></tr>
+    <tr><td><code>render(...)</code></td><td>Hàm phụ của nhóm, gọi <code>render_template</code>: ghép dữ liệu vào file HTML. Luôn gửi kèm <code>form</code> (để điền lại ô vừa nhập) và bảng S-box</td></tr>
+    <tr><td><code>jsonify(...)</code></td><td>Trả JSON cho JavaScript (phòng chat)</td></tr>
+    <tr><td><code>send_file(...)</code></td><td>Gửi tệp đã mã hóa về cho người dùng tải (<code>/download/&lt;token&gt;</code>)</td></tr>
+    <tr><td><code>redirect(url_for(...))</code></td><td>Chuyển sang trang khác (VD xóa lịch sử xong quay lại <code>/history</code>)</td></tr>
+    <tr><td><code>@app.errorhandler(413)</code></td><td>Tệp lớn hơn 20 MB thì báo lỗi dễ hiểu thay vì trang lỗi mặc định</td></tr>
+    <tr><td><code>try / except ValueError</code></td><td>Nhập sai (khóa không đủ 8 bit...) thì hiện chữ đỏ trên trang, không làm sập web</td></tr>
+  </table>
+</section>
+
+{# ============ HTML ============ #}
+<section class="card" id="html">
+  <h2 class="card-title">HTML viết thế nào (Jinja)</h2>
+  <p>Flask dùng <b>Jinja</b> để ghép dữ liệu vào HTML. Mọi trang dùng chung khung <code>templates/base.html</code> (menu trái, tiêu đề, chân trang).
+    Mỗi trang con chỉ viết phần riêng của nó:</p>
+  <pre class="code">{{ '{% extends "base.html" %}' }}              <span class="cm">dùng khung chung</span>
+{{ "{% set active = 'sdes_page' %}" }}          <span class="cm">tô sáng mục này trên menu</span>
+{{ '{% block heading %}' }}TinyDES{{ '{% endblock %}' }}   <span class="cm">điền vào chỗ trống "heading" của base.html</span>
+{{ '{% block content %}' }}
+  &lt;form method="post" action="{{ "{{ url_for('sdes_demo') }}" }}"&gt;   <span class="cm">url_for -> /sdes_demo</span>
+    &lt;input name="sdes_key"&gt;                      <span class="cm">app.py đọc bằng request.form.get("sdes_key")</span>
+  &lt;/form&gt;
+  {{ '{% if sdes %}' }}                                  <span class="cm">chỉ hiện khi đã có kết quả</span>
+    Bản mã: {{ '{{ sdes.out_bin }}' }}                   <span class="cm">in giá trị Python gửi sang</span>
+    {{ '{% for k in sdes.keys %}' }} {{ '{{ k }}' }} {{ '{% endfor %}' }}  <span class="cm">lặp như for của Python</span>
+  {{ '{% endif %}' }}
+{{ '{% endblock %}' }}</pre>
+  <p>Từng file HTML có gì, form gửi gì, nhận biến gì: xem mục <a href="#tung-trang">Từng trang HTML</a> ngay dưới.</p>
+  <p class="hint">Muốn thêm 1 trang: viết hàm <code>@app.get("/ten")</code> trong <code>app.py</code> trả về <code>render("ten.html")</code>,
+    tạo <code>templates/ten.html</code> bắt đầu bằng <code>{{ '{% extends "base.html" %}' }}</code>, rồi thêm 1 dòng vào biến <code>menu</code> trong <code>base.html</code>.</p>
+</section>
+
+{# ============ Python ============ #}
+{# ============ Từng trang HTML ============ #}
+<section id="tung-trang">
+  <h2 class="section-title">Từng trang HTML</h2>
+  <p class="hint">Mỗi thẻ dưới đây là 1 file trong <code>templates/</code>: mở bằng địa chỉ nào, bố cục từ trên xuống, form gửi gì, app.py gửi sang biến gì.
+    Nhảy nhanh:
+    <a href="#p-base">Khung chung</a> · <a href="#p-home">Trang chủ</a> · <a href="#p-chat">Demo chat</a> · <a href="#p-sdes">TinyDES</a> ·
+    <a href="#p-des">DES</a> · <a href="#p-code">Đọc code</a> · <a href="#p-attack">Tấn công</a> · <a href="#p-bench">Đo thời gian</a> ·
+    <a href="#p-tests">Kiểm thử</a> · <a href="#p-history">Lịch sử</a></p>
+  <div class="card" id="p-base">
+    <h3 class="card-title">Khung chung <small><code>templates/base.html</code></small></h3>
+    <p class="hint">Mở: <code>(mọi trang dùng chung)</code> → hàm <code>không có, trang con extends</code> trong <code>app.py</code></p>
+    <h4 class="sub">Bố cục (từ trên xuống)</h4>
+    <ol class="clean steps"><li>Thẻ <code>&lt;head&gt;</code>: tiêu đề tab (block <code>title</code>), font Google, nạp <code>style.css</code>.</li><li>Menu trái <code>&lt;aside class="sidebar"&gt;</code>: tên đồ án, danh sách mục lấy từ biến <code>menu</code> đầu file, vòng <code>{{ '{% for item in menu %}' }}</code> vẽ từng mục. Mục trùng biến <code>active</code> được tô sáng.</li><li>Chú thích 3 vai An / Bình / Kẻ xấu ở chân menu.</li><li>Phần phải: <code>&lt;h1&gt;</code> lấy từ block <code>heading</code>, dòng mô tả từ block <code>subtitle</code>, chỗ nút phụ block <code>head_extra</code>.</li><li><code>&lt;main&gt;</code> chứa block <code>content</code>: nội dung riêng của từng trang.</li><li>Chân trang <code>&lt;footer&gt;</code>.</li></ol>
+    <h4 class="sub">Biến app.py gửi sang</h4>
+    <table class="log small"><tr><th>Biến</th><th>Chứa gì</th><th>Hiện ở đâu</th></tr>
+      <tr><td><code>active</code></td><td>tên hàm của trang đang mở, VD 'sdes_page' (trang con đặt bằng {{ '{% set active = ... %}' }})</td><td>tô sáng mục menu</td></tr>
+    </table>
+    <p class="hint">Thêm trang vào menu: thêm 1 dòng ('tên_hàm', 'Chữ hiện') vào biến menu.</p>
+  </div>
+  <div class="card" id="p-home">
+    <h3 class="card-title">Trang chủ <small><code>templates/home.html</code></small></h3>
+    <p class="hint">Mở: <code>GET /</code> → hàm <code>index()</code> trong <code>app.py</code></p>
+    <h4 class="sub">Bố cục (từ trên xuống)</h4>
+    <ol class="clean steps"><li>2 khung chạy nhanh đặt cạnh nhau (<code>two-col</code>): TinyDES và DES.</li><li>Bảng các chức năng: mỗi dòng 1 trang, nhập gì, ra gì, có link.</li><li>Ô số lượt đã dùng từng chức năng.</li></ol>
+    <h4 class="sub">Form và các ô nhập</h4>
+    <table class="log small"><tr><th>Form gửi tới</th><th>Ô (name)</th><th>Ý nghĩa</th></tr>
+      <tr><td><code>POST /sdes_demo</code></td><td><code>sdes_input</code>, <code>sdes_key</code>, <code>sdes_fmt</code> (ẩn, = bin)</td><td>Bản rõ / bản mã 8 bit, khóa 8 bit. Gửi thẳng tới hàm của trang TinyDES</td></tr>
+      <tr><td><code>POST /sdes_demo</code></td><td><code>sdes_action</code></td><td>2 nút cùng name: Mã hóa gửi <code>enc</code>, Giải mã gửi <code>dec</code></td></tr>
+      <tr><td><code>POST /des_file</code></td><td><code>des_text</code>, <code>des_key</code>, <code>des_action</code></td><td>Văn bản, khóa, enc/dec. Gửi thẳng tới hàm của trang DES</td></tr>
+    </table>
+    <h4 class="sub">Biến app.py gửi sang</h4>
+    <table class="log small"><tr><th>Biến</th><th>Chứa gì</th><th>Hiện ở đâu</th></tr>
+      <tr><td><code>stats</code></td><td>dict số lượt, VD {'TinyDES': 5, 'DES': 2}</td><td>ô số lượt, đọc bằng stats.get(tên, 0)</td></tr>
+    </table>
+    <p class="hint">Bấm nút ở trang chủ thì trình duyệt chuyển sang trang TinyDES / DES và hiện kết quả ở đó.</p>
+  </div>
+  <div class="card" id="p-chat">
+    <h3 class="card-title">Demo: An gửi Bình <small><code>templates/chat.html</code></small></h3>
+    <p class="hint">Mở: <code>GET /chat</code> → hàm <code>chat()</code> trong <code>app.py</code></p>
+    <h4 class="sub">Bố cục (từ trên xuống)</h4>
+    <ol class="clean steps"><li>3 thẻ vai An, Kẻ xấu, Bình.</li><li>Thanh khóa chung: 2 nút chọn <code>name="chatAlgo"</code> (TinyDES / DES), ô <code>id="chatKey"</code>, dòng cảnh báo khóa yếu <code>id="keyWarn"</code>.</li><li>Sân khấu 3 cột: điện thoại An (<code>#anMsgs</code> + form <code>#anForm</code>), đường truyền (<code>#packets</code>), điện thoại Bình (<code>#binhMsgs</code>). Lúc đầu chỉ có dòng chữ trống <code>.msgs-empty</code>.</li><li>Ô lỗi <code>#chatError</code> (ẩn khi không có lỗi).</li><li>5 thẻ Phòng thủ, 3 thẻ có nút <code>data-def="des" / "weak" / "repeat"</code>.</li></ol>
+    <h4 class="sub">Form và các ô nhập</h4>
+    <table class="log small"><tr><th>Form gửi tới</th><th>Ô (name)</th><th>Ý nghĩa</th></tr>
+      <tr><td>(không gửi lên server)</td><td><code>#anText</code></td><td>Form <code>#anForm</code> không có action: <code>chat.js</code> chặn việc gửi form (<code>preventDefault</code>) rồi tự gọi <code>fetch</code></td></tr>
+    </table>
+    <h4 class="sub">Biến app.py gửi sang</h4>
+    <table class="log small"><tr><th>Biến</th><th>Chứa gì</th><th>Hiện ở đâu</th></tr>
+      <tr><td><code>(không có)</code></td><td>Trang trả về chỉ là khung trống</td><td>Mọi bong bóng, gói tin do <code>chat.js</code> tạo sau khi nhận JSON</td></tr>
+    </table>
+    <p><b>JavaScript:</b> <code>static/chat.js</code> nạp ở cuối trang. Nó tìm phần tử theo <code>id</code> ở trên, gắn sự kiện bấm nút, gọi 4 API <code>/api/chat/...</code> (xem mục Phòng chat).</p>
+    <p class="hint">Đây là trang duy nhất không tải lại trang khi bấm nút.</p>
+  </div>
+  <div class="card" id="p-sdes">
+    <h3 class="card-title">TinyDES từng bước <small><code>templates/sdes.html</code></small></h3>
+    <p class="hint">Mở: <code>GET /sdes</code> → hàm <code>sdes_page(); bấm nút → sdes_demo()</code> trong <code>app.py</code></p>
+    <h4 class="sub">Bố cục (từ trên xuống)</h4>
+    <ol class="clean steps"><li>Bảng S-box 4×16 (vẽ bằng 2 vòng <code>{{ '{% for row in box %}' }}</code> / <code>{{ '{% for v in row %}' }}</code>).</li><li>Form nhập khóa, dạng dữ liệu, dữ liệu; chữ đỏ nếu có <code>sdes_error</code>.</li><li>Sau khi bấm (chỉ hiện khi có <code>sdes</code>): ô kết quả bản mã / bản rõ dạng nhị phân và hex, dòng giải mã ngược để kiểm tra.</li><li>Dải luồng Đầu vào → Vòng 1 → 2 → 3 của khối đầu (<code>sdes.flow</code>).</li><li>Thanh trình chiếu <code>#present-bar</code> với các nút <code>#btn-present</code>, <code>#btn-next</code>, <code>#btn-all</code>; các tab chọn khối <code>#block-tabs</code> nếu nhập nhiều byte.</li><li>Các bước trung gian của từng khối: sinh K1, K2, K3, rồi 3 vòng (Expand, ⊕K, S-box, P-box), mỗi bit là 1 ô vuông vẽ bằng macro <code>bitrow</code>.</li><li>Bảng log thanh ghi của mọi khối (<code>sdes.blocks</code>).</li></ol>
+    <h4 class="sub">Form và các ô nhập</h4>
+    <table class="log small"><tr><th>Form gửi tới</th><th>Ô (name)</th><th>Ý nghĩa</th></tr>
+      <tr><td><code>POST /sdes_demo</code></td><td><code>sdes_key</code></td><td>Khóa 8 bit, có <code>pattern="[01]{8}"</code> nên trình duyệt chặn ngay nếu gõ sai</td></tr>
+      <tr><td><code>POST /sdes_demo</code></td><td><code>sdes_fmt</code></td><td><code>bin</code> (khối 8 bit) hoặc <code>text</code> (văn bản; giải mã thì nhập hex)</td></tr>
+      <tr><td><code>POST /sdes_demo</code></td><td><code>sdes_input</code></td><td>Dữ liệu cần mã hóa / giải mã</td></tr>
+      <tr><td><code>POST /sdes_demo</code></td><td><code>sdes_action</code></td><td><code>enc</code> hoặc <code>dec</code></td></tr>
+    </table>
+    <h4 class="sub">Biến app.py gửi sang</h4>
+    <table class="log small"><tr><th>Biến</th><th>Chứa gì</th><th>Hiện ở đâu</th></tr>
+      <tr><td><code>form</code></td><td>giá trị vừa nhập</td><td>điền lại vào ô bằng <code>form.get('sdes_key', '10011010')</code></td></tr>
+      <tr><td><code>sdes</code></td><td>kết quả: out_bin, out_hex, subkeys, flow, traces, blocks, roundtrip</td><td>toàn bộ phần kết quả</td></tr>
+      <tr><td><code>sdes_error</code></td><td>câu báo lỗi</td><td>chữ đỏ dưới form</td></tr>
+      <tr><td><code>sbox</code></td><td>bảng S-box</td><td>bảng 4×16 đầu trang, ô vừa tra được tô màu</td></tr>
+    </table>
+    <p><b>JavaScript:</b> <code>static/present.js</code>: nút Trình chiếu từng bước và các tab khối.</p>
+  </div>
+  <div class="card" id="p-des">
+    <h3 class="card-title">DES: văn bản & tệp <small><code>templates/des.html</code></small></h3>
+    <p class="hint">Mở: <code>GET /des</code> → hàm <code>des_page(); bấm nút → des_file()</code> trong <code>app.py</code></p>
+    <h4 class="sub">Bố cục (từ trên xuống)</h4>
+    <ol class="clean steps"><li>Form: khóa, chọn tệp, hoặc gõ văn bản; chữ đỏ nếu có <code>des_error</code>.</li><li>Sau khi bấm: 4 ô số liệu (kích thước, thời gian...), bản mã hex / bản rõ, dòng giải mã ngược khớp, nút tải tệp kết quả (<code>/download/&lt;token&gt;</code>).</li><li>Nếu là ảnh: 3 hình cạnh nhau, ảnh gốc → bản mã → ảnh giải mã (nhúng bằng data URI).</li><li>2 bảng: 16 khóa con (C, D, K) và 16 vòng Feistel của khối đầu.</li></ol>
+    <h4 class="sub">Form và các ô nhập</h4>
+    <table class="log small"><tr><th>Form gửi tới</th><th>Ô (name)</th><th>Ý nghĩa</th></tr>
+      <tr><td><code>POST /des_file</code></td><td><code>des_key</code></td><td>8 ký tự hoặc 16 hex</td></tr>
+      <tr><td><code>POST /des_file</code></td><td><code>des_file</code> (type=file)</td><td>Tệp bất kỳ. Form phải có <code>enctype="multipart/form-data"</code> thì mới gửi được tệp</td></tr>
+      <tr><td><code>POST /des_file</code></td><td><code>des_text</code></td><td>Văn bản (dùng khi không chọn tệp)</td></tr>
+      <tr><td><code>POST /des_file</code></td><td><code>des_action</code></td><td><code>enc</code> hoặc <code>dec</code></td></tr>
+    </table>
+    <h4 class="sub">Biến app.py gửi sang</h4>
+    <table class="log small"><tr><th>Biến</th><th>Chứa gì</th><th>Hiện ở đâu</th></tr>
+      <tr><td><code>des</code></td><td>kết quả: tên, kích thước, thời gian, token tải về, key_log, round_log, ảnh xem trước</td><td>phần kết quả</td></tr>
+      <tr><td><code>des_error</code></td><td>câu báo lỗi (VD sai khóa → padding sai, tệp quá 20 MB)</td><td>chữ đỏ dưới form</td></tr>
+    </table>
+    <p class="hint">Dùng <code>{{ '{% if des.roundtrip_ok is defined %}' }}</code> để chỉ hiện dòng kiểm tra khi app.py có gửi biến đó (lúc mã hóa).</p>
+  </div>
+  <div class="card" id="p-code">
+    <h3 class="card-title">Đọc code cùng thuật toán <small><code>templates/code_guide.html</code></small></h3>
+    <p class="hint">Mở: <code>GET /doc-code</code> → hàm <code>code_guide()</code> trong <code>app.py</code></p>
+    <h4 class="sub">Bố cục (từ trên xuống)</h4>
+    <ol class="clean steps"><li>Cách đọc trang (4 loại ô: slide nói, hiểu nôm na, code thật, các biến).</li><li>Bản đồ file nào làm gì.</li><li>Phần A TinyDES, phần B DES, phần C bấm nút thì code nào trong app.py chạy.</li><li>Cú pháp Python hay gặp.</li></ol>
+    <h4 class="sub">Biến app.py gửi sang</h4>
+    <table class="log small"><tr><th>Biến</th><th>Chứa gì</th><th>Hiện ở đâu</th></tr>
+      <tr><td><code>src</code></td><td>mã nguồn thật từng hàm kèm số dòng (lấy bằng <code>inspect</code> lúc mở trang)</td><td>các khung code nền tối, vẽ bằng macro <code>code(s)</code></td></tr>
+      <tr><td><code>ex</code></td><td>giá trị ví dụ tính thật: TinyDES trang 72, DES 133457799BBCDFF1</td><td>bảng biến cạnh mỗi đoạn code</td></tr>
+    </table>
+    <p class="hint">Không có form. Sửa code trong core/ hay app.py là trang tự đổi theo, không phải sửa HTML.</p>
+  </div>
+  <div class="card" id="p-attack">
+    <h3 class="card-title">Tấn công TinyDES <small><code>templates/bruteforce.html</code></small></h3>
+    <p class="hint">Mở: <code>GET /bruteforce</code> → hàm <code>bruteforce_page(); 6 form → 6 hàm</code> trong <code>app.py</code></p>
+    <h4 class="sub">Bố cục (từ trên xuống)</h4>
+    <ol class="clean steps"><li>Kịch bản 1 (chỉ biết bản mã): form bên trái, giải thích bên phải; kết quả: diễn biến 4 bước, 3 ô số liệu, bảng 5 ứng viên (dòng khóa thật tô xanh).</li><li>Kịch bản 2 (biết bản rõ): form, giải thích; kết quả: 3 ô số liệu và danh sách khóa khớp.</li><li>Kịch bản 3 (chọn bản rõ): form, giải thích; kết quả: diễn biến, 3 ô số liệu, bảng tra 16×16 (ô có trong bản mã tô đỏ).</li><li>Kịch bản 4 (gặp nhau ở giữa, TinyDES 2 lớp): form 2 tin + K1, K2; kết quả: diễn biến 4 bước, cặp khóa tìm được, tin bí mật bị đọc, 3 ô so sánh 512 lần với 65.536 cặp.</li><li>Kịch bản 5 (vét cạn 1 khối 8 bit, bản gọn theo code git): form bản rõ + khóa 8 bit; kết quả: diễn biến, khóa khả nghi (ghi lần thử), 3 ô số liệu.</li><li>Kịch bản 6 (chọn bản rõ 1 khối 8 bit, bản gọn theo code git): form bản rõ mục tiêu + khóa 8 bit; kết quả: diễn biến, bản rõ khôi phục, 3 ô số liệu.</li></ol>
+    <h4 class="sub">Form và các ô nhập</h4>
+    <table class="log small"><tr><th>Form gửi tới</th><th>Ô (name)</th><th>Ý nghĩa</th></tr>
+      <tr><td><code>POST /sdes_bruteforce_cipher</code> → <code>sdes_bruteforce_cipher()</code></td><td><code>co_message</code>, <code>co_key</code></td><td>Tin của An và khóa bí mật</td></tr>
+      <tr><td><code>POST /sdes_bruteforce</code> → <code>sdes_bruteforce()</code></td><td><code>bf_fmt</code>, <code>bf_plain</code>, <code>bf_cipher</code></td><td>Dạng dữ liệu, bản rõ đã biết, bản mã chặn được</td></tr>
+      <tr><td><code>POST /sdes_chosen_plaintext</code> → <code>sdes_chosen_plaintext()</code></td><td><code>cp_message</code>, <code>cp_key</code></td><td>Tin của An và khóa nằm trong hộp đen</td></tr>
+      <tr><td><code>POST /sdes_mitm</code> → <code>sdes_mitm()</code></td><td><code>mm_known</code>, <code>mm_secret</code>, <code>mm_k1</code>, <code>mm_k2</code></td><td>Tin cũ kẻ xấu đã biết, tin bí mật, 2 khóa của 2 lớp</td></tr>
+      <tr><td><code>POST /sdes_bf_block</code> → <code>sdes_bf_block()</code></td><td><code>bfb_plain</code>, <code>bfb_key</code></td><td>1 khối bản rõ 8 bit + khóa 8 bit (bản gọn theo code git)</td></tr>
+      <tr><td><code>POST /sdes_cp_block</code> → <code>sdes_cp_block()</code></td><td><code>cpb_plain</code>, <code>cpb_key</code></td><td>1 khối bản rõ mục tiêu 8 bit + khóa trong hộp đen (bản gọn theo code git)</td></tr>
+    </table>
+    <h4 class="sub">Biến app.py gửi sang</h4>
+    <table class="log small"><tr><th>Biến</th><th>Chứa gì</th><th>Hiện ở đâu</th></tr>
+      <tr><td><code>co / co_error</code></td><td>kết quả / lỗi kịch bản 1: cipher_hex, top, guess, success, elapsed</td><td>dưới form 1</td></tr>
+      <tr><td><code>bf / bf_error</code></td><td>kết quả / lỗi kịch bản 2: found, tried, elapsed</td><td>dưới form 2</td></tr>
+      <tr><td><code>cp / cp_error</code></td><td>kết quả / lỗi kịch bản 3: grid 16×16, used, lookups, text</td><td>dưới form 3</td></tr>
+      <tr><td><code>mm / mm_error</code></td><td>kết quả / lỗi kịch bản 4: pairs, runs, naive_runs, elapsed, naive_ms, read</td><td>dưới form 4</td></tr>
+      <tr><td><code>bfb / bfb_error</code></td><td>kết quả / lỗi kịch bản 5: plain, key, cipher, found (khóa + lần thử), tried, elapsed</td><td>dưới form 5</td></tr>
+      <tr><td><code>cpb / cpb_error</code></td><td>kết quả / lỗi kịch bản 6: plain, key, cipher, cracked, calls, rows, elapsed</td><td>dưới form 6</td></tr>
+    </table>
+    <p class="hint">Mỗi lần chỉ 1 trong 6 biến co / bf / cp / mm / bfb / cpb có giá trị, nên chỉ kịch bản vừa bấm hiện kết quả. Ô nhập của form 2 có thể được điền sẵn qua URL: <code>/bruteforce?bf_plain=...&amp;bf_cipher=...</code>.</p>
+  </div>
+  <div class="card" id="p-bench">
+    <h3 class="card-title">Đo thời gian <small><code>templates/benchmark.html</code></small></h3>
+    <p class="hint">Mở: <code>GET /benchmark</code> → hàm <code>benchmark_page(); bấm nút → benchmark()</code> trong <code>app.py</code></p>
+    <h4 class="sub">Bố cục (từ trên xuống)</h4>
+    <ol class="clean steps"><li>Giải thích cách đo và 1 nút chạy.</li><li>Bảng kết quả 4 dòng (1 KB → 1 MB), mỗi dòng có thanh màu dài theo thời gian.</li><li>Ô tóm tắt tốc độ ở 1 MB.</li></ol>
+    <h4 class="sub">Form và các ô nhập</h4>
+    <table class="log small"><tr><th>Form gửi tới</th><th>Ô (name)</th><th>Ý nghĩa</th></tr>
+      <tr><td><code>POST /benchmark</code></td><td>(không có ô)</td><td>Chỉ có nút, dữ liệu ngẫu nhiên do app.py tự tạo</td></tr>
+    </table>
+    <h4 class="sub">Biến app.py gửi sang</h4>
+    <table class="log small"><tr><th>Biến</th><th>Chứa gì</th><th>Hiện ở đâu</th></tr>
+      <tr><td><code>bench</code></td><td>4 dòng: des_enc, des_dec, lib, sdes (ms), speed, bar (%)</td><td>bảng kết quả; thanh màu <code>style="width: {{ '{{ r.bar }}' }}%"</code></td></tr>
+    </table>
+  </div>
+  <div class="card" id="p-tests">
+    <h3 class="card-title">Kiểm thử <small><code>templates/tests.html</code></small></h3>
+    <p class="hint">Mở: <code>GET /tests</code> → hàm <code>tests_page(); tự nhập → tests_custom(); chạy cả bộ → tests_run()</code> trong <code>app.py</code></p>
+    <h4 class="sub">Bố cục (từ trên xuống)</h4>
+    <ol class="clean steps"><li>Form tự nhập 1 ca, ô Chọn nhanh ca mẫu <code>#preset</code>.</li><li>Kết quả ca tự nhập: dòng thời gian từng bước, ô PASS xanh / FAIL đỏ, có nút trình chiếu.</li><li>Nút chạy cả bộ kiểm thử, bảng kết quả theo nhóm A / B / C (vùng <code>#suite</code>).</li></ol>
+    <h4 class="sub">Form và các ô nhập</h4>
+    <table class="log small"><tr><th>Form gửi tới</th><th>Ô (name)</th><th>Ý nghĩa</th></tr>
+      <tr><td><code>POST /tests/custom</code></td><td><code>t_algo</code>, <code>t_plain</code>, <code>t_key</code>, <code>t_expected</code></td><td>Thuật toán, bản rõ, khóa, bản mã mong đợi (có thể bỏ trống)</td></tr>
+      <tr><td><code>POST /tests</code> (về <code>#suite</code>)</td><td>(không có ô)</td><td>Chạy toàn bộ test_runner</td></tr>
+    </table>
+    <h4 class="sub">Biến app.py gửi sang</h4>
+    <table class="log small"><tr><th>Biến</th><th>Chứa gì</th><th>Hiện ở đâu</th></tr>
+      <tr><td><code>presets</code></td><td>ca mẫu (trang 72, Grabbe, NIST)</td><td>các <code>&lt;option data-plain=...&gt;</code> trong ô Chọn nhanh</td></tr>
+      <tr><td><code>custom / custom_error</code></td><td>kết quả / lỗi ca tự nhập: steps, passed, total</td><td>dòng thời gian các bước</td></tr>
+      <tr><td><code>groups</code></td><td>kết quả cả bộ, nhóm theo A / B / C</td><td>bảng PASS / FAIL</td></tr>
+    </table>
+    <p><b>JavaScript:</b> Đoạn <code>&lt;script&gt;</code> ngay trong trang: chọn ca mẫu thì đọc <code>data-*</code> của option rồi điền vào ô. Thêm <code>static/present.js</code> cho nút trình chiếu.</p>
+  </div>
+  <div class="card" id="p-history">
+    <h3 class="card-title">Lịch sử <small><code>templates/history.html</code></small></h3>
+    <p class="hint">Mở: <code>GET /history</code> → hàm <code>history()</code> trong <code>app.py</code></p>
+    <h4 class="sub">Bố cục (từ trên xuống)</h4>
+    <ol class="clean steps"><li>Nút Xóa lịch sử ở góc tiêu đề (block <code>head_extra</code>).</li><li>Ô số lượt từng loại.</li><li>Bảng mọi thao tác, mới nhất trước; dòng lỗi nền đỏ nhạt.</li></ol>
+    <h4 class="sub">Form và các ô nhập</h4>
+    <table class="log small"><tr><th>Form gửi tới</th><th>Ô (name)</th><th>Ý nghĩa</th></tr>
+      <tr><td><code>POST /history/clear</code></td><td>(không có ô)</td><td>Có <code>onsubmit="return confirm(...)"</code>: hỏi lại trước khi xóa</td></tr>
+    </table>
+    <h4 class="sub">Biến app.py gửi sang</h4>
+    <table class="log small"><tr><th>Biến</th><th>Chứa gì</th><th>Hiện ở đâu</th></tr>
+      <tr><td><code>rows</code></td><td>các dòng trong bảng history của SQLite</td><td>bảng lịch sử</td></tr>
+      <tr><td><code>stats</code></td><td>số lượt mỗi loại</td><td>ô số lượt</td></tr>
+      <tr><td><code>db_path</code></td><td>đường dẫn tệp history.db</td><td>dòng ghi chú</td></tr>
+    </table>
+  </div>
+</section>
+
+{# ============ JavaScript ============ #}
+<section class="card" id="js">
+  <h2 class="card-title">JavaScript: static/chat.js và static/present.js</h2>
+  <p>JavaScript chạy trong trình duyệt. Web chỉ có 2 file JS, cả hai đều <b>không mã hóa gì</b>:</p>
+  <div class="two-col">
+    <div>
+      <h3 class="sub">chat.js (trang Demo: An gửi Bình)</h3>
+      <table class="log small">
+        <tr><th>Hàm</th><th>Làm gì</th></tr>
+        <tr><td><code>api(path, body)</code></td><td>Gửi JSON lên máy chủ bằng <code>fetch()</code>, nhận JSON về. Mọi nút đều đi qua hàm này</td></tr>
+        <tr><td><code>send(text)</code></td><td>Bấm “Mã hóa &amp; gửi” → gọi <code>/api/chat/send</code></td></tr>
+        <tr><td><code>addAn</code>, <code>addPacket</code>, <code>addBinh</code></td><td>Vẽ bong bóng bên An, gói tin ở giữa, bong bóng bên Bình</td></tr>
+        <tr><td><code>attack</code>, <code>chosen</code>, <code>tamper</code></td><td>3 nút của kẻ xấu trên mỗi gói tin</td></tr>
+        <tr><td><code>el(tag, cls, text)</code></td><td>Tạo thẻ HTML. Chữ đưa vào bằng <code>textContent</code> nên tin người dùng gõ không bao giờ biến thành mã HTML</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3 class="sub">present.js (trang TinyDES, Kiểm thử)</h3>
+      <p>Nút “Trình chiếu từng bước”. Không gọi máy chủ, chỉ thêm / bỏ 2 class CSS:</p>
+      <ul class="clean steps">
+        <li><code>presenting</code> trên khung: làm mờ mọi bước.</li>
+        <li><code>shown</code> trên từng bước: hiện rõ bước đó.</li>
+        <li>Phím <kbd>→</kbd> / <kbd>Space</kbd>: bước tiếp. <kbd>Esc</kbd>: hiện tất cả.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="hint">Nạp JS ở cuối template: <code>&lt;script src="{{ "{{ url_for('static', filename='chat.js') }}" }}"&gt;&lt;/script&gt;</code>. Sửa JS xong nhớ tải lại bằng <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>.</p>
+</section>
+
+{# ============ Chat ============ #}
+<section class="card" id="chat">
+  <h2 class="card-title">Phòng chat “An gửi Bình” chạy thế nào</h2>
+  <h3 class="sub">Chat dùng cái gì?</h3>
+  <ul class="clean steps">
+    <li><b>Không có máy chủ chat riêng, không dùng WebSocket.</b> An, đường truyền và Bình nằm chung 1 trang web để mô phỏng.</li>
+    <li>Trình duyệt dùng <b>JavaScript <code>fetch()</code></b> gửi dữ liệu dạng <b>JSON</b> lên <b>Flask</b> (<code>app.py</code>), nhận JSON về,
+      rồi <code>chat.js</code> tự vẽ bong bóng tin. <b>Trang không tải lại.</b></li>
+    <li>Mã hóa và giải mã vẫn chạy ở Python (<code>core/</code>), giống mọi trang khác.</li>
+  </ul>
+
+  <h3 class="sub">Một tin nhắn đi qua những đâu</h3>
+  <ol class="clean steps">
+    <li>An gõ “Hello”, khóa <span class="mono">11011010</span>, bấm <b>Mã hóa &amp; gửi</b>.</li>
+    <li><code>chat.js</code> (hàm <code>send()</code>) gửi lên máy chủ:
+      <div class="mono">POST /api/chat/send   {"algo": "tinydes", "key": "11011010", "text": "Hello"}</div></li>
+    <li><code>app.py</code> (hàm <code>chat_send()</code>):
+      chữ → byte (<code>text.encode("utf-8")</code>) → <b>An</b> mã hóa bằng <code>tinydes_core.encrypt_bytes()</code>
+      → <b>Bình</b> giải mã lại bằng cùng khóa → trả JSON:
+      <div class="mono">{"ok": true, "cipher_hex": "43 61 DA DA C0", "bob_text": "Hello", "weak": false, ...}</div></li>
+    <li><code>chat.js</code> nhận JSON, vẽ 3 thứ: bong bóng bên An (tin gốc), gói tin ở giữa (<code>cipher_hex</code>, thứ kẻ xấu thấy), bong bóng bên Bình (<code>bob_text</code>).</li>
+    <li>Các nút trên gói tin gửi tiếp bản mã lên các API của kẻ xấu (bảng dưới).</li>
+  </ol>
+
+  <div class="scroll">
+    <table class="log">
+      <tr><th>Nút</th><th>Địa chỉ (API)</th><th>Hàm trong app.py</th><th>Gửi lên</th><th>Nhận về</th></tr>
+      <tr><td>Mã hóa &amp; gửi</td><td><code>/api/chat/send</code></td><td><code>chat_send()</code></td><td>algo, key, text</td><td>cipher_hex, bob_text, weak</td></tr>
+      <tr><td>Vét cạn khóa</td><td><code>/api/chat/attack</code></td><td><code>chat_attack()</code></td><td>algo, cipher_hex</td><td>TinyDES: 3 khóa điểm cao nhất; DES: tốc độ, số năm</td></tr>
+      <tr><td>Tấn công chọn bản rõ</td><td><code>/api/chat/chosen</code></td><td><code>chat_chosen()</code></td><td>algo, key, cipher_hex</td><td>TinyDES: số dòng bảng tra, tin dịch được; DES: không lập được bảng</td></tr>
+      <tr><td>Sửa 1 bit rồi chuyển</td><td><code>/api/chat/tamper</code></td><td><code>chat_tamper()</code></td><td>algo, key, cipher_hex, index</td><td>bản mã đã sửa, tin Bình nhận</td></tr>
+    </table>
+  </div>
+  <p class="hint">Vét cạn có gửi kèm khóa thật, nhưng máy chủ <b>không dùng</b> khóa đó để tìm, chỉ để báo “kẻ xấu đoán đúng chưa”.
+    Tấn công chọn bản rõ dùng khóa thật để làm <b>hộp đen</b>: kẻ xấu chỉ gọi được hàm mã hóa, không đọc được khóa.</p>
+
+  <h3 class="sub">Vì sao bấm nút mà trang không tải lại (cơ chế fetch)</h3>
+  <p>Mọi trang khác dùng <code>&lt;form method="post" action="..."&gt;</code>: bấm nút là trình duyệt <b>rời trang, gọi địa chỉ mới, tải lại cả trang</b>.
+    Phòng chat thì khác — form <code>#anForm</code> <b>không có</b> <code>action</code>, và <code>chat.js</code> chặn hành vi gửi form mặc định:</p>
+  <pre class="code">$("anForm").addEventListener("submit", function (e) {
+    e.preventDefault();                 <span class="cm">chặn trình duyệt tải lại trang</span>
+    send($("anText").value.trim());     <span class="cm">tự gọi máy chủ bằng JavaScript</span>
+});
+
+function api(path, body) {              <span class="cm">mọi nút đều đi qua đây</span>
+    return fetch(path, {                <span class="cm">fetch = gọi máy chủ ngầm, không rời trang</span>
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)      <span class="cm">đối tượng JS -> chuỗi JSON để gửi đi</span>
+    })
+    .then(function (r) { return r.json(); })   <span class="cm">đọc JSON máy chủ trả về</span>
+    .then(function (d) { if (!d.ok) throw new Error(d.error); return d; });
+}</pre>
+  <p>Khác biệt cốt lõi so với trang có form thường:</p>
+  <table class="log small">
+    <tr><th></th><th>Trang form thường (TinyDES, DES...)</th><th>Phòng chat</th></tr>
+    <tr><td>Ai gọi máy chủ</td><td>Trình duyệt tự gửi khi bấm nút</td><td><code>chat.js</code> gọi <code>fetch()</code></td></tr>
+    <tr><td>Gửi gì lên</td><td>Dữ liệu form (<code>sdes_key=...&amp;...</code>)</td><td>JSON (<code>{"algo":...,"key":...}</code>)</td></tr>
+    <tr><td>app.py trả về</td><td>Cả trang HTML (<code>render(...)</code>)</td><td>Chỉ dữ liệu JSON (<code>jsonify(...)</code>)</td></tr>
+    <tr><td>Ai vẽ kết quả</td><td>Jinja ghép sẵn ở máy chủ</td><td><code>chat.js</code> tạo thẻ HTML ngay trong trình duyệt</td></tr>
+    <tr><td>Trang có tải lại</td><td>Có, thấy chớp trắng</td><td>Không, bong bóng hiện tại chỗ</td></tr>
+  </table>
+  <p class="hint">Vì mã hóa vẫn nằm ở Python (<code>core/</code>), JavaScript chỉ lo gửi/nhận và vẽ. Bấm nhiều nút = nhiều lần <code>fetch</code> độc lập,
+    nên trang giữ nguyên lịch sử bong bóng cũ.</p>
+
+  <h3 class="sub">5 thẻ “Phòng thủ” làm gì</h3>
+  <p>Dưới sân khấu chat có 5 thẻ gợi ý cách chống kẻ xấu. 3 thẻ có nút, mỗi nút gắn thuộc tính <code>data-def</code>; <code>chat.js</code> bắt sự kiện rồi
+    <b>đổi khóa / đổi thuật toán và gửi lại</b> để thấy ngay khác biệt:</p>
+  <table class="log small">
+    <tr><th>Nút (<code>data-def</code>)</th><th>chat.js làm gì</th><th>Để cho thấy điều gì</th></tr>
+    <tr><td><code>des</code></td><td>Chuyển <code>chatAlgo</code> sang DES, điền khóa DES mặc định, gọi lại <code>send()</code></td><td>Dùng DES (khóa dài) thì vét cạn trở nên bất khả thi</td></tr>
+    <tr><td><code>weak</code></td><td>Chuyển về TinyDES, đặt khóa yếu <span class="mono">11110000</span>, gọi lại <code>send()</code></td><td>Khóa yếu làm K1 = K2 = K3 → cảnh báo khóa yếu bật lên</td></tr>
+    <tr><td><code>repeat</code></td><td>Gửi lại <b>đúng tin cũ</b> với cùng khóa</td><td>Cùng tin + cùng khóa → bản mã lặp y hệt, kẻ xấu nhận ra mẫu</td></tr>
+  </table>
+
+  <h3 class="sub">Muốn chat thật giữa 2 máy thì cần thêm gì</h3>
+  <p>Bản hiện tại chỉ mô phỏng trên 1 trang. Muốn An và Bình ngồi 2 máy khác nhau:</p>
+  <ol class="clean steps">
+    <li>Chạy máy chủ cho máy khác vào được: <code>app.run(host="0.0.0.0")</code>, hai máy chung wifi vào <code>http://&lt;IP máy chủ&gt;:5000/chat</code>.</li>
+    <li>Lưu tin vào cơ sở dữ liệu (thêm 1 bảng trong <code>history.db</code>), <b>chỉ lưu bản mã</b>.</li>
+    <li>Bên Bình hỏi máy chủ vài giây 1 lần (<code>setInterval</code> + <code>fetch</code>), hoặc dùng <b>Flask-SocketIO</b> (WebSocket) để máy chủ đẩy tin ngay.</li>
+    <li>Giải mã ở phía Bình bằng khóa Bình tự nhập, máy chủ không giữ khóa.</li>
+  </ol>
+</section>
+
+{# ============ Bảng trang ============ #}
+<section class="card" id="bang-trang">
+  <h2 class="card-title">Trang nào gọi hàm nào</h2>
+  <div class="scroll">
+    <table class="log small">
+      <tr><th>Trang</th><th>Template / JS</th><th>Mở trang (GET)</th><th>Bấm nút gửi tới</th></tr>
+      <tr><td><a href="{{ url_for('index') }}">Trang chủ</a></td><td><code>home.html</code></td><td><code>/</code> → <code>index()</code></td><td>2 form gửi thẳng tới <code>/sdes_demo</code>, <code>/des_file</code></td></tr>
+      <tr><td><a href="{{ url_for('guide') }}">Hướng dẫn</a></td><td><code>guide.html</code></td><td><code>/huong-dan</code> → <code>guide()</code></td><td>Không có form</td></tr>
+      <tr><td><a href="{{ url_for('chat') }}">Demo: An gửi Bình</a></td><td><code>chat.html</code> + <code>chat.js</code></td><td><code>/chat</code> → <code>chat()</code></td><td>JS gọi 4 API <code>/api/chat/...</code> (bảng ở mục Phòng chat)</td></tr>
+      <tr><td><a href="{{ url_for('sdes_page') }}">TinyDES từng bước</a></td><td><code>sdes.html</code> + <code>present.js</code></td><td><code>/sdes</code> → <code>sdes_page()</code></td><td><code>POST /sdes_demo</code> → <code>sdes_demo()</code></td></tr>
+      <tr><td><a href="{{ url_for('des_page') }}">DES: văn bản &amp; tệp</a></td><td><code>des.html</code></td><td><code>/des</code> → <code>des_page()</code></td><td><code>POST /des_file</code> → <code>des_file()</code>; tải tệp: <code>/download/&lt;token&gt;</code></td></tr>
+      <tr><td><a href="{{ url_for('code_guide') }}">Đọc code</a></td><td><code>code_guide.html</code></td><td><code>/doc-code</code> → <code>code_guide()</code></td><td>Không có form</td></tr>
+      <tr><td><a href="{{ url_for('bruteforce_page') }}">Tấn công TinyDES</a></td><td><code>bruteforce.html</code></td><td><code>/bruteforce</code> → <code>bruteforce_page()</code></td><td><code>/sdes_bruteforce_cipher</code>, <code>/sdes_bruteforce</code>, <code>/sdes_chosen_plaintext</code>, <code>/sdes_mitm</code>, <code>/sdes_bf_block</code>, <code>/sdes_cp_block</code></td></tr>
+      <tr><td><a href="{{ url_for('benchmark_page') }}">Đo thời gian</a></td><td><code>benchmark.html</code></td><td><code>/benchmark</code> → <code>benchmark_page()</code></td><td><code>POST /benchmark</code> → <code>benchmark()</code></td></tr>
+      <tr><td><a href="{{ url_for('tests_page') }}">Kiểm thử</a></td><td><code>tests.html</code> + <code>present.js</code></td><td><code>/tests</code> → <code>tests_page()</code></td><td><code>POST /tests</code>, <code>/tests/custom</code></td></tr>
+      <tr><td><a href="{{ url_for('history') }}">Lịch sử</a></td><td><code>history.html</code></td><td><code>/history</code> → <code>history()</code></td><td><code>POST /history/clear</code></td></tr>
+    </table>
+  </div>
+</section>
+
+{# ============ Nút -> hàm thuật toán ============ #}
+<section class="card" id="nut-thuat-toan">
+  <h2 class="card-title">Nút nào chạy tới hàm thuật toán nào</h2>
+  <p>HTML <b>không tự mã hóa</b>. Một nút chỉ nối tới thuật toán qua một chuỗi 4 chặng. Ví dụ nút <b>Mã hóa</b> ở trang TinyDES:</p>
+  <pre class="tree">&lt;button name="sdes_action" value="enc"&gt;Mã hóa&lt;/button&gt;     (1) NÚT trong HTML, nằm trong &lt;form action="/sdes_demo"&gt;
+          │  bấm → trình duyệt POST tới action
+          ▼
+/sdes_demo  ⇐ url_for('sdes_demo')                          (2) ĐỊA CHỈ (route), tạo từ url_for trong template
+          │  Flask tra bảng @app.post
+          ▼
+def sdes_demo():  trong app.py                              (3) HÀM XỬ LÝ: đọc ô nhập, bắt lỗi, ghi lịch sử
+          │  gọi vào core/
+          ▼
+tinydes_core.encrypt(P, K)  trong core/tinydes_core.py      (4) HÀM THUẬT TOÁN thật sự mã hóa</pre>
+  <p>Vậy “HTML link tới thuật toán kiểu gì”: <code>action</code>/<code>url_for</code> của form chỉ tới <b>địa chỉ</b> → Flask map địa chỉ sang <b>hàm trong app.py</b> → hàm đó mới gọi <b>hàm trong core/</b>.
+    Nút <code>enc</code>/<code>dec</code> cùng một <code>name</code> nên cùng địa chỉ; app.py nhìn <code>value</code> để chọn mã hóa hay giải mã.</p>
+
+  <div class="scroll">
+    <table class="log small">
+      <tr><th>Trang</th><th>Nút (chữ trên nút)</th><th>Địa chỉ gửi tới</th><th>Hàm trong app.py</th><th>Hàm thuật toán được gọi (core/)</th></tr>
+
+      <tr><td rowspan="2">TinyDES / Trang chủ</td><td>Mã hóa</td><td><code>POST /sdes_demo</code></td><td><code>sdes_demo()</code></td><td><code>tinydes_core.encrypt</code> (câu chữ: <code>encrypt_bytes</code>), <code>generate_keys</code>, <code>trace</code></td></tr>
+      <tr><td>Giải mã</td><td><code>POST /sdes_demo</code></td><td><code>sdes_demo()</code></td><td><code>tinydes_core.decrypt</code> (câu chữ: <code>decrypt_bytes</code>)</td></tr>
+
+      <tr><td rowspan="2">DES / Trang chủ</td><td>Mã hóa</td><td><code>POST /des_file</code></td><td><code>des_file()</code></td><td><code>utils.des_encrypt_bytes</code>, <code>des_core.generate_subkeys</code>, <code>des_core.crypt_block_verbose</code></td></tr>
+      <tr><td>Giải mã</td><td><code>POST /des_file</code></td><td><code>des_file()</code></td><td><code>utils.des_decrypt_bytes</code></td></tr>
+
+      <tr><td rowspan="4">Tấn công TinyDES</td><td>Gửi đi → kẻ xấu chặn (KB 1)</td><td><code>POST /sdes_bruteforce_cipher</code></td><td><code>sdes_bruteforce_cipher()</code></td><td><code>tinydes_core.encrypt_bytes</code> (tạo bản mã) + <code>brute_force_ciphertext_only</code> (→ <code>readability_score</code>)</td></tr>
+      <tr><td>Bẻ khóa (biết bản rõ, KB 2)</td><td><code>POST /sdes_bruteforce</code></td><td><code>sdes_bruteforce()</code></td><td><code>tinydes_core.all_keys</code> + <code>generate_keys</code> + <code>encrypt_bytes</code> (so khớp 256 khóa)</td></tr>
+      <tr><td>Kẻ xấu mượn hộp đen (KB 3)</td><td><code>POST /sdes_chosen_plaintext</code></td><td><code>sdes_chosen_plaintext()</code></td><td><code>tinydes_core.chosen_plaintext_attack</code> (→ <code>build_codebook</code>), hộp đen = <code>_encrypt_block</code></td></tr>
+      <tr><td>Kẻ xấu gặp nhau ở giữa (KB 4)</td><td><code>POST /sdes_mitm</code></td><td><code>sdes_mitm()</code></td><td><code>tinydes_core.double_encrypt_bytes</code> + <code>meet_in_the_middle</code> + <code>double_decrypt_bytes</code></td></tr>
+      <tr><td>Vét cạn 1 khối 8 bit (KB 5, git)</td><td><code>POST /sdes_bf_block</code></td><td><code>sdes_bf_block()</code></td><td><code>TinyDES().encrypt</code> (tạo bản mã) + <code>TinyDES().decrypt</code> thử 256 khóa + <code>all_keys</code></td></tr>
+      <tr><td>Chọn bản rõ 1 khối 8 bit (KB 6, git)</td><td><code>POST /sdes_cp_block</code></td><td><code>sdes_cp_block()</code></td><td><code>TinyDES().encrypt</code> làm hộp đen, nạp 256 bản rõ dựng bảng tra rồi tra ngược</td></tr>
+
+      <tr><td rowspan="4">Demo chat (nút trên gói tin)</td><td>Mã hóa &amp; gửi</td><td><code>POST /api/chat/send</code></td><td><code>chat_send()</code></td><td><code>tinydes_core.encrypt_bytes</code> / <code>utils.des_encrypt_bytes</code> (chọn qua <code>chat_cipher</code>)</td></tr>
+      <tr><td>Vét cạn khóa</td><td><code>POST /api/chat/attack</code></td><td><code>chat_attack()</code></td><td>TinyDES: <code>tinydes_core.brute_force_ciphertext_only</code>; DES: <code>des_core.decrypt_block</code> (đo tốc độ, ước lượng số năm)</td></tr>
+      <tr><td>Tấn công chọn bản rõ</td><td><code>POST /api/chat/chosen</code></td><td><code>chat_chosen()</code></td><td>TinyDES: <code>tinydes_core.chosen_plaintext_attack</code>; DES: báo bảng tra <span class="mono">2^64</span> dòng → bất khả thi</td></tr>
+      <tr><td>Sửa 1 bit rồi chuyển</td><td><code>POST /api/chat/tamper</code></td><td><code>chat_tamper()</code></td><td>Mã hóa / giải mã lại qua <code>chat_cipher</code> để Bình nhận tin hỏng</td></tr>
+
+      <tr><td>Đo thời gian</td><td>Chạy đo</td><td><code>POST /benchmark</code></td><td><code>benchmark()</code></td><td><code>utils.des_encrypt_bytes</code>/<code>des_decrypt_bytes</code>, pycryptodome, <code>tinydes_core.encrypt_bytes</code></td></tr>
+      <tr><td rowspan="2">Kiểm thử</td><td>Chạy ca tự nhập</td><td><code>POST /tests/custom</code></td><td><code>tests_custom()</code></td><td><code>tinydes_core.encrypt</code> hoặc <code>utils.des_encrypt_bytes</code> rồi so với bản mã mong đợi</td></tr>
+      <tr><td>Chạy cả bộ</td><td><code>POST /tests</code></td><td><code>tests_run()</code></td><td><code>test_runner</code> (ví dụ trang 72, NIST, đối chiếu pycryptodome)</td></tr>
+    </table>
+  </div>
+  <p class="hint">Quy tắc chung: <b>app.py không tự mã hóa</b> — nó chỉ đọc ô nhập, gọi một hàm trong <code>core/</code>, rồi trả kết quả.
+    Muốn biết hàm core đó chạy thế nào, xem trang <a href="{{ url_for('code_guide') }}">Đọc code cùng thuật toán</a>.</p>
+</section>
+
+{# ============ Sự cố ============ #}
+<h2 class="section-title" id="su-co">Khi gặp sự cố</h2>
+<div class="card scroll">
+  <table class="log">
+    <tr><th>Hiện tượng</th><th>Cách xử lý</th></tr>
+    <tr><td><code>ModuleNotFoundError: No module named 'flask'</code></td><td>Chưa bật môi trường ảo hoặc chưa cài: <code>source .venv/bin/activate</code> rồi <code>pip install -r requirements.txt</code>.</td></tr>
+    <tr><td><code>Address already in use</code> (cổng 5000 bận)</td><td>Đã có một cửa sổ đang chạy <code>app.py</code>: tắt nó (<kbd>Ctrl</kbd> + <kbd>C</kbd>) rồi chạy lại.</td></tr>
+    <tr><td>Bấm nút trong phòng chat không có gì xảy ra</td><td>Máy chủ đã tắt (chat cần <code>app.py</code> đang chạy để <code>fetch()</code> gọi được), hoặc trình duyệt còn giữ <code>chat.js</code> cũ: tải lại bằng <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>.</td></tr>
+    <tr><td>Báo “Khóa TinyDES phải gồm đúng 8 bit 0/1”</td><td>Đang chọn TinyDES nhưng gõ chữ. Gõ 8 ký tự 0/1, hoặc chọn DES.</td></tr>
+    <tr><td>Báo “Khóa DES phải là 8 ký tự hoặc 16 ký tự hex”</td><td>Khóa DES phải đúng 8 ký tự (VD <span class="mono">nhom2026</span>) hoặc 16 ký tự hex.</td></tr>
+    <tr><td>Giải mã DES báo “Padding sai”</td><td>Sai khóa, hoặc bản mã bị sửa / dán thiếu.</td></tr>
+    <tr><td>Ảnh không hiện xem trước</td><td>Ảnh lớn hơn 3 MB thì không xem trước (vẫn mã hóa được).</td></tr>
+    <tr><td>Trang không đổi sau khi sửa code</td><td>Tải lại bằng <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> để trình duyệt lấy CSS, JS mới.</td></tr>
+  </table>
+</div>
+{% endblock %}

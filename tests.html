@@ -1,0 +1,218 @@
+{#
+  TRANG KIỂM THỬ (/tests)
+  Hàm tạo ra trang này: tests_page(), tests_custom() (ca tự nhập) và tests_run() (chạy cả bộ) trong app.py  ->  render("tests.html", ...)
+  Cách đọc file template (Jinja) - xem giải thích đầy đủ ở đầu base.html:
+    {% extends "base.html" %}       dùng khung chung (menu trái, tiêu đề, chân trang)
+    {% set active = '...' %}        tên mục menu cần tô sáng
+    {% block X %}...{% endblock %} nội dung điền vào chỗ trống tên X trong base.html
+    {{ biến }}                       in giá trị do app.py gửi sang
+  Dữ liệu nhận:
+    presets      : danh sách ca mẫu để chọn nhanh (ví dụ trên lớp, Grabbe, NIST)
+    custom       : kết quả ca tự nhập = {steps: các bước, passed, total, plain, cipher}
+    custom_error : lỗi nhập
+    groups       : kết quả bộ kiểm thử tự động, nhóm theo A / B / C; passed, total, elapsed
+#}
+{% extends "base.html" %}
+{% set active = 'tests_page' %}
+{% block title %}Kiểm thử{% endblock %}
+{% block heading %}Kiểm thử{% endblock %}
+{% block subtitle %}Tự nhập ca kiểm thử và xem từng bước · Bộ kiểm thử tự động (nhóm tự viết, NIST SP 800-17, thư viện chuẩn){% endblock %}
+
+{% block content %}
+<!-- ===================== 1. TỰ NHẬP CA KIỂM THỬ ===================== -->
+<div class="card">
+  <h2 class="card-title"><span class="num">1</span> Tự nhập ca kiểm thử</h2>
+  <p class="hint">Nhập bản rõ, khóa và (nếu có) bản mã mong đợi, ví dụ lấy từ bài trên lớp hoặc từ NIST.
+    Chương trình sẽ chạy từng bước và kiểm tra: bản mã có đúng mong đợi không, có khớp thư viện chuẩn không
+    (với DES), và giải mã ngược có ra lại bản rõ không.</p>
+
+{#
+  FORM TỰ NHẬP: gửi POST tới /tests/custom.
+  Ô "Chọn nhanh ca mẫu": mỗi <option> giữ sẵn dữ liệu trong data-algo, data-plain... ;
+  đoạn <script> cuối file đọc các data-* đó rồi điền vào ô nhập khi bạn chọn.
+#}
+  <form method="post" action="{{ url_for('tests_custom') }}" class="form-grid" id="custom-form">
+    <label>Thuật toán
+      <select name="t_algo" id="t_algo">
+        <option value="sdes" {% if form.get('t_algo', 'sdes') == 'sdes' %}selected{% endif %}>TinyDES (khối 8 bit, khóa 8 bit)</option>
+        <option value="des" {% if form.get('t_algo') == 'des' %}selected{% endif %}>DES (khối 64 bit, khóa 64 bit)</option>
+      </select>
+    </label>
+    <label>Chọn nhanh ca mẫu
+      <select id="preset">
+        <option value="">— tự nhập —</option>
+        {% for p in presets %}
+        <option data-algo="{{ p.algo }}" data-plain="{{ p.plain }}" data-key="{{ p.key }}" data-expected="{{ p.expected }}">{{ p.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Bản rõ <small class="hint" id="h_plain">8 bit, ví dụ 01011100</small>
+      <input name="t_plain" id="t_plain" required class="mono" value="{{ form.get('t_plain', '01011100') }}">
+    </label>
+    <label>Khóa <small class="hint" id="h_key">8 bit, ví dụ 10011010</small>
+      <input name="t_key" id="t_key" required class="mono" value="{{ form.get('t_key', '10011010') }}">
+    </label>
+    <label class="wide">Bản mã mong đợi <small class="hint">(không bắt buộc — để trống nếu chỉ muốn xem kết quả)</small>
+      <input name="t_expected" id="t_expected" class="mono" value="{{ form.get('t_expected', '10010010') }}" placeholder="để trống nếu không có">
+    </label>
+    <div class="actions wide">
+      <button class="btn primary">Chạy kiểm thử</button>
+    </div>
+  </form>
+  {% if custom_error %}<p class="error">{{ custom_error }}</p>{% endif %}
+</div>
+
+{% if custom %}
+<div class="card result">
+  <div class="test-summary">
+    <div>
+      <h2 class="card-title">Kết quả ca tự nhập — {{ 'TinyDES' if custom.algo == 'sdes' else 'DES' }}</h2>
+      <div class="io-row">
+        <span class="io-chip"><small>Bản rõ</small><b class="mono">{{ custom.plain }}</b></span>
+        <span class="arrow">→</span>
+        <span class="io-chip out"><small>Bản mã</small><b class="mono">{{ custom.cipher }}</b></span>
+      </div>
+    </div>
+    <div class="verdict {{ 'pass' if custom.passed == custom.total else 'fail' }}">
+      <small>{{ 'ĐẠT' if custom.passed == custom.total else 'CHƯA ĐẠT' }}</small>
+      <b>{{ custom.passed }}/{{ custom.total }}</b>
+      <span>bước kiểm tra</span>
+    </div>
+  </div>
+  <div class="present-ctrl">
+    <button type="button" class="btn" id="btn-present">Trình chiếu từng bước</button>
+    <button type="button" class="btn primary" id="btn-next" hidden>Bước tiếp →</button>
+    <button type="button" class="btn" id="btn-all" hidden>Hiện tất cả</button>
+    <span class="hint" id="step-count"></span>
+    {% if custom.algo == 'sdes' %}
+    <a class="btn small" href="{{ url_for('sdes_page') }}">Xem từng bit ở trang TinyDES Demo →</a>
+    {% endif %}
+  </div>
+</div>
+
+{#
+  DÒNG THỜI GIAN: mỗi bước (s trong custom.steps) là 1 ô có số thứ tự bên trái.
+    s.ok == true  -> ô viền xanh + chữ PASS;  s.ok == false -> ô đỏ + chữ FAIL;  s.ok là none -> bước chỉ hiển thị
+    s.fields: các cặp (nhãn, giá trị) hiện thành các ô nhỏ
+    s.detail: bảng phụ thu gọn (16 khóa con hoặc 16 vòng)
+#}
+<div class="trace timeline">
+  {% for s in custom.steps %}
+  <div class="tl-step step-unit {{ 'pass' if s.ok == true }}{{ 'fail' if s.ok == false }}{{ ' check' if s.ok is not none }}">
+    <div class="tl-num">{{ loop.index }}</div>
+    <div class="tl-body">
+      <div class="tl-head">
+        <div><b>{{ s.title }}</b><small>{{ s.desc }}</small></div>
+        {% if s.ok == true %}<span class="chip ok">PASS</span>{% elif s.ok == false %}<span class="chip bad">FAIL</span>{% endif %}
+      </div>
+      <div class="tl-items">
+        {% for label, value in s.fields %}
+        <span class="tl-item"><small>{{ label }}</small><b class="mono">{{ value }}</b></span>
+        {% endfor %}
+      </div>
+      {% if s.detail and s.detail.type == 'keys' %}
+      <details><summary>Xem đủ 16 khóa con</summary>
+        <table class="log small"><tr><th>Bước</th><th>C</th><th>D</th><th>Khóa con</th></tr>
+          {% for k in s.detail.rows %}<tr><td>{{ k.vong }}</td><td class="mono">{{ k.c }}</td><td class="mono">{{ k.d }}</td><td class="mono">{{ k.k }}</td></tr>{% endfor %}
+        </table></details>
+      {% elif s.detail and s.detail.type == 'rounds' %}
+      <details><summary>Xem đủ 16 vòng</summary>
+        <div class="scroll"><table class="log small"><tr><th>Vòng</th><th>Ki</th><th>E(R)⊕K</th><th>S-box</th><th>f</th><th>L</th><th>R</th></tr>
+          {% for r in s.detail.rows %}<tr><td>{{ r.vong }}</td><td class="mono">{{ r.k }}</td><td class="mono">{{ r.xor }}</td><td class="mono">{{ r.s }}</td><td class="mono">{{ r.f }}</td><td class="mono">{{ r.l }}</td><td class="mono">{{ r.r }}</td></tr>{% endfor %}
+        </table></div></details>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ===================== 2. BỘ KIỂM THỬ TỰ ĐỘNG ===================== -->
+<div class="card" id="suite">
+  <h2 class="card-title"><span class="num">2</span> Bộ kiểm thử tự động — <code>test_runner.py</code></h2>
+  <div class="three-col groups-info">
+    <div class="g-info"><b>A. Nhóm tự viết (13 ca)</b><small>Ví dụ TinyDES trong tài liệu, khứ hồi toàn bộ 256 khóa × 256 bản rõ, class TinyDES, brute-force,
+      ví dụ DES của Grabbe, văn bản tiếng Việt, padding, sai khóa</small></div>
+    <div class="g-info"><b>B. NIST SP 800-17 (16 ca)</b><small>8 test vector chuẩn (Known Answer Test), mỗi vector kiểm tra
+      cả mã hóa và giải mã</small></div>
+    <div class="g-info"><b>C. Thư viện pycryptodome (14 ca)</b><small>3 khối cố định, 3 đoạn văn bản, 200 cặp ngẫu nhiên, 7 tệp 0 B → 100 KB.
+      Thư viện chỉ dùng để so sánh</small></div>
+  </div>
+  <form method="post" action="{{ url_for('tests_run') }}#suite" class="suite-run">
+    <button class="btn primary">Chạy toàn bộ (≈ 6 giây)</button>
+    <span class="hint">Cùng bộ kiểm thử với lệnh <code>python test_runner.py</code>.</span>
+  </form>
+</div>
+
+{% if groups %}
+<div class="stats big">
+  <div class="{{ 'good' if passed == total else 'badbox' }}"><span>Kết quả</span><b>Passed {{ passed }}/{{ total }}</b></div>
+  {% for g, cases in groups.items() %}
+  <div><span>{{ g }}</span><b>{{ cases|selectattr('ok')|list|length }}/{{ cases|length }}</b></div>
+  {% endfor %}
+  <div><span>Thời gian</span><b>{{ elapsed }} s</b></div>
+</div>
+
+{#
+  MỖI NHÓM KIỂM THỬ (A, B, C) 1 bảng, bấm tiêu đề để thu gọn / mở ra.
+  Nhóm có ca FAIL thì mở sẵn ({% if ... rejectattr('ok') ... %}: lọc ra các ca có ok = False).
+  c.rerun có dữ liệu -> có nút "Chạy từng bước": link GET /tests/custom?t_algo=...&t_plain=...
+#}
+{% for g, cases in groups.items() %}
+<div class="card">
+  <details {% if loop.first or (cases|rejectattr('ok')|list) %}open{% endif %}>
+    <summary class="group-sum">{{ g }} — {{ cases|selectattr('ok')|list|length }}/{{ cases|length }} PASS</summary>
+    <div class="scroll">
+    <table class="log small">
+      <tr><th>#</th><th>Ca kiểm thử</th><th>Đầu vào</th><th>Mong đợi</th><th>Thực tế</th><th>Kết quả</th><th></th></tr>
+      {% for c in cases %}
+      <tr class="{{ 'err' if not c.ok }}">
+        <td>{{ loop.index }}</td>
+        <td><b>{{ c.name }}</b></td>
+        <td class="mono">{{ c.input }}</td>
+        <td class="mono breakall">{{ c.expected }}</td>
+        <td class="mono breakall">{{ c.actual }}</td>
+        <td>{% if c.ok %}<span class="chip ok">PASS</span>{% else %}<span class="chip bad">FAIL</span>{% endif %}</td>
+        <td>{% if c.rerun %}<a class="btn small run-link" href="{{ url_for('tests_custom', **c.rerun) }}">Chạy từng bước</a>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+  </details>
+</div>
+{% endfor %}
+<p class="hint">Nguồn test vector: NIST SP 800-17 (Appendix A – Known Answer Tests); ví dụ TinyDES: tài liệu Chương 2 - Mã hoá khoá đối xứng (trang 72);
+  ví dụ DES: J. Orlin Grabbe, “The DES Algorithm Illustrated”.</p>
+{% endif %}
+
+<script src="{{ url_for('static', filename='present.js') }}"></script>
+{#
+  JavaScript của trang:
+    setHints : đổi dòng gợi ý dưới ô nhập khi chọn TinyDES / DES
+    preset   : khi chọn ca mẫu, chép data-algo, data-plain, data-key, data-expected vào các ô nhập
+#}
+<script>
+(() => {
+  const algo = document.getElementById('t_algo');
+  const hints = {
+    sdes: ['8 bit, ví dụ 01011100', '8 bit, ví dụ 10011010'],
+    des:  ['16 ký tự hex, ví dụ 0123456789ABCDEF', '16 hex hoặc 8 ký tự, ví dụ 133457799BBCDFF1'],
+  };
+  const setHints = () => {
+    document.getElementById('h_plain').textContent = hints[algo.value][0];
+    document.getElementById('h_key').textContent = hints[algo.value][1];
+  };
+  algo.addEventListener('change', setHints);
+  setHints();
+  document.getElementById('preset').addEventListener('change', e => {
+    const o = e.target.selectedOptions[0];
+    if (!o.dataset.algo) return;
+    algo.value = o.dataset.algo;
+    document.getElementById('t_plain').value = o.dataset.plain;
+    document.getElementById('t_key').value = o.dataset.key;
+    document.getElementById('t_expected').value = o.dataset.expected;
+    setHints();
+  });
+})();
+</script>
+{% endblock %}
