@@ -1,0 +1,924 @@
+<title>DES từng bước</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;800&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+/* Layout: một cột đọc ~ 900px giống trang TinyDES; mỗi bước là một tấm Vào → Làm → Ra → Code; thanh đi từng bước cố định ở đáy */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #eef1f6;
+  --ink: #18212d;
+  --muted: #5a6575;
+  --line: #d5dbe4;
+  --l: #2563c9;  --l-soft: #dce8fb;
+  --r: #c75417;  --r-soft: #fbe3d4;
+  --k: #7044c4;  --k-soft: #e9e0fa;
+  --f: #13875b;  --f-soft: #d6f1e5;
+  --hl: #e8b417; --hl-soft: #fdf3cf;
+  --bad: #b42335;
+  --c0: #d33f49; --c1: #e07a1f; --c2: #b89100; --c3: #3c9a3c;
+  --c4: #1f8fa8; --c5: #3f63d6; --c6: #8a4fd1; --c7: #c2408f;
+  --font-body: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161d; --surface: #19202a; --surface-2: #212a36; --ink: #e6ebf2; --muted: #9aa6b6; --line: #2f3a48;
+    --l: #6ea2ff; --l-soft: #1d2f4f; --r: #ff9461; --r-soft: #47281a; --k: #b393ff; --k-soft: #33275a;
+    --f: #4fd39d; --f-soft: #153d2e; --hl: #f5c842; --hl-soft: #3f3514; --bad: #ff6b7d;
+    --c0: #ff6b73; --c1: #ffa04d; --c2: #e6c13a; --c3: #6cc96c; --c4: #4cc3dc; --c5: #7d9bff; --c6: #b88aff; --c7: #f27abf;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161d; --surface: #19202a; --surface-2: #212a36; --ink: #e6ebf2; --muted: #9aa6b6; --line: #2f3a48;
+  --l: #6ea2ff; --l-soft: #1d2f4f; --r: #ff9461; --r-soft: #47281a; --k: #b393ff; --k-soft: #33275a;
+  --f: #4fd39d; --f-soft: #153d2e; --hl: #f5c842; --hl-soft: #3f3514; --bad: #ff6b7d;
+  --c0: #ff6b73; --c1: #ffa04d; --c2: #e6c13a; --c3: #6cc96c; --c4: #4cc3dc; --c5: #7d9bff; --c6: #b88aff; --c7: #f27abf;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 calc(96px + env(safe-area-inset-bottom, 0px));
+}
+.wrap { max-width: 900px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2, h3 { text-wrap: balance; line-height: 1.25; margin: 0; }
+h1 { font-size: clamp(30px, 6vw, 44px); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.01em; }
+h3 { font-size: 18px; font-weight: 700; }
+p { margin: 0; }
+code, .mono { font-family: var(--font-mono); font-size: 0.92em; }
+:focus-visible { outline: 3px solid var(--hl); outline-offset: 2px; }
+
+header.top { padding-top: 32px; display: grid; gap: 14px; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lead { color: var(--muted); max-width: 68ch; }
+.inputs {
+  display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px;
+}
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.field input {
+  font-family: var(--font-mono); font-size: 16px; letter-spacing: 0.06em; width: 19ch; max-width: 100%;
+  padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+}
+.field input.wide { width: min(26ch, 100%); letter-spacing: 0; }
+.field input[aria-invalid="true"] { border-color: var(--bad); }
+.btn {
+  font: inherit; font-weight: 600; font-size: 14px; cursor: pointer;
+  padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink);
+}
+.btn:hover { border-color: var(--muted); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.err { color: var(--bad); font-size: 14px; font-weight: 600; }
+.summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; font-size: 15px; }
+.summary .arrow, .arrow { color: var(--muted); font-weight: 700; }
+
+/* ô bit: bản nhỏ vì DES có 64 bit */
+.bits { display: inline-flex; flex-wrap: wrap; gap: 6px 10px; align-items: flex-start; vertical-align: middle; }
+.g { display: inline-flex; gap: 2px; }
+.bit {
+  --tint: var(--muted);
+  display: inline-grid; justify-items: center; align-content: start; gap: 0;
+  min-width: 25px; padding: 2px 2px 1px; border-radius: 5px;
+  border: 2px solid var(--tint); background: var(--surface);
+  font-family: var(--font-mono); font-weight: 700; font-size: 14px; line-height: 1.15;
+}
+.bit.one { background: color-mix(in srgb, var(--tint) 24%, var(--surface)); }
+.bit small { font-family: var(--font-mono); font-weight: 500; font-size: 9px; color: var(--muted); white-space: nowrap; }
+.bit.dim { opacity: 0.35; }
+.bit.big { min-width: 32px; font-size: 17px; padding: 4px 4px 3px; border-radius: 7px; }
+.bit.big small { font-family: var(--font-body); font-size: 10.5px; font-weight: 600; }
+.gname { display: inline-grid; justify-items: center; font-size: 11px; color: var(--muted); font-weight: 600; gap: 2px; }
+.tag {
+  display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 99px;
+  border: 1.5px solid currentColor; vertical-align: middle; white-space: nowrap;
+}
+.tag.l { color: var(--l); } .tag.r { color: var(--r); } .tag.k { color: var(--k); } .tag.f { color: var(--f); }
+.hexline { font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.04em; }
+
+section.part { display: grid; gap: 16px; }
+.part-head { display: grid; gap: 6px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 18px; display: grid; gap: 14px; min-width: 0; scroll-margin-top: 24px; transition: box-shadow 0.2s;
+}
+.card.is-current { box-shadow: 0 0 0 3px var(--hl); }
+.card-title { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: baseline; }
+.step-no { font-family: var(--font-mono); font-weight: 700; font-size: 13px; color: var(--bg); background: var(--ink); border-radius: 6px; padding: 1px 7px; }
+.io { display: grid; grid-template-columns: 64px 1fr; gap: 10px 12px; align-items: center; }
+.io > .lab { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.io > div { min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.stack { display: grid; gap: 8px; }
+.why { background: var(--hl-soft); border-radius: 8px; padding: 12px 14px; display: grid; gap: 6px; }
+.plain { background: var(--surface-2); border-radius: 8px; padding: 12px 14px; display: grid; gap: 8px; }
+pre {
+  margin: 0; overflow-x: auto; background: var(--surface-2); border-radius: 8px; padding: 12px 14px;
+  font-family: var(--font-mono); font-size: 13px; line-height: 1.55;
+}
+pre .c { color: var(--muted); }
+pre .fn { color: var(--k); font-weight: 700; }
+.codehead { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { border: 1px solid var(--line); padding: 4px 7px; text-align: center; font-family: var(--font-mono); font-size: 13px; }
+th { background: var(--surface-2); font-weight: 600; }
+td.hit-row, th.hit-row { background: color-mix(in srgb, var(--r) 16%, var(--surface)); }
+td.hit-col, th.hit-col { background: color-mix(in srgb, var(--l) 16%, var(--surface)); }
+td.hit { background: var(--hl); color: #1b1600; font-weight: 700; }
+.sum-table td, .sum-table th { font-size: 13px; padding: 5px 9px; }
+.sum-table td.t { font-family: var(--font-body); text-align: left; font-weight: 600; white-space: nowrap; }
+.sum-table tr.sel td { background: var(--hl-soft); }
+.sum-table tr.click { cursor: pointer; }
+.sum-table tr.click:hover td { background: var(--surface-2); }
+.mini { font-size: 14px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: inherit; font-family: var(--font-mono); font-weight: 700; font-size: 13px; cursor: pointer;
+  min-width: 38px; padding: 5px 8px; border-radius: 8px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.chip small { display: block; font-size: 10px; font-weight: 500; color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip[aria-pressed="true"] small { color: var(--bg); }
+.shift-chip { display: inline-grid; justify-items: center; min-width: 34px; padding: 3px 6px; border-radius: 7px; border: 1.5px solid var(--line); font-family: var(--font-mono); font-weight: 700; }
+.shift-chip small { font-size: 10px; color: var(--muted); font-weight: 500; }
+.shift-chip.one { border-color: var(--k); background: var(--k-soft); }
+
+/* sơ đồ hàm */
+.flow { display: grid; }
+.node {
+  display: grid; gap: 2px; padding: 10px 14px; border-radius: 9px; border: 2px solid var(--tint, var(--line));
+  background: var(--surface); text-align: left; font: inherit; color: inherit; cursor: pointer; width: 100%;
+}
+.node:hover { background: var(--surface-2); }
+.node .nm { font-family: var(--font-mono); font-weight: 700; font-size: 14.5px; color: var(--tint, var(--ink)); }
+.node .ds { font-size: 13.5px; color: var(--muted); }
+.down { height: 26px; display: grid; place-items: center; color: var(--muted); position: relative; }
+.down::before { content: ""; position: absolute; left: 28px; top: 0; bottom: 0; border-left: 2px solid var(--line); }
+.down span { padding-left: 44px; justify-self: start; font-family: var(--font-mono); font-size: 12px; }
+.branch { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; padding-left: 28px; border-left: 2px solid var(--line); margin-left: 28px; }
+.branch .sub { display: grid; gap: 8px; padding-left: 16px; border-left: 2px dotted var(--line); align-content: start; }
+.node.small { padding: 7px 10px; }
+.node.small .nm { font-size: 13px; }
+
+svg.swap { width: 100%; max-width: 560px; height: auto; display: block; }
+svg.swap .box-l { fill: var(--l-soft); stroke: var(--l); stroke-width: 2; }
+svg.swap .box-r { fill: var(--r-soft); stroke: var(--r); stroke-width: 2; }
+svg.swap .box-f { fill: var(--f-soft); stroke: var(--f); stroke-width: 2; }
+svg.swap .ln-l { stroke: var(--l); stroke-width: 2.5; fill: none; }
+svg.swap .ln-r { stroke: var(--r); stroke-width: 2.5; fill: none; }
+svg.swap .ln-f { stroke: var(--f); stroke-width: 2.5; fill: none; }
+svg.swap text { fill: var(--ink); font-family: var(--font-mono); font-size: 14px; font-weight: 700; }
+svg.swap text.cap { font-family: var(--font-body); font-size: 12px; font-weight: 600; fill: var(--muted); }
+svg.swap .xor-c { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
+svg.swap .plus { stroke: var(--ink); stroke-width: 2; }
+svg.swap .ah-l { fill: var(--l); } svg.swap .ah-r { fill: var(--r); } svg.swap .ah-f { fill: var(--f); }
+
+.stepper {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(6px);
+  border-top: 1px solid var(--line);
+  padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.stepper .in { max-width: 900px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
+.stepper .where { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stepper .where span { color: var(--muted); font-weight: 500; font-family: var(--font-mono); margin-right: 6px; }
+.progress { height: 3px; background: var(--line); border-radius: 3px; margin: 0 auto 8px; max-width: 900px; overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--hl); width: 0; transition: width 0.25s; }
+
+@media (max-width: 560px) {
+  .io { grid-template-columns: 1fr; gap: 4px; }
+  .io > .lab { margin-top: 6px; }
+  .branch { margin-left: 12px; padding-left: 12px; }
+  .bit { min-width: 22px; font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) { .card, .progress i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">Chương 2 · Mã hóa khóa đối xứng · slide 73–83</div>
+    <h1>DES từng bước</h1>
+    <p class="lead">DES làm <b>y hệt TinyDES</b>, chỉ to hơn: mỗi lần xử lý <b>8 chữ cái</b> (64 ô 0/1) thay vì 1 chữ, và trộn <b>16 lần</b> thay vì 3. Mỗi bước ghi rõ: đưa <b>vào</b> gì, <b>làm</b> gì, <b>ra</b> gì, và dòng <b>code</b> nào làm việc đó. Mỗi ô vuông là 1 bit (một ô 0 hoặc 1). Số nhỏ dưới ô, ví dụ "←58", nghĩa là "ô này chép từ ô số 58". Bấm <b>Tiếp →</b> ở đáy trang để đi từng bước.</p>
+    <div class="plain">
+      <p><b>Tóm cả DES trong 4 câu:</b></p>
+      <p>1. Từ mật khẩu, làm ra <b>16 chìa nhỏ</b> (Phần A).</p>
+      <p>2. Xáo chỗ 64 ô của tin nhắn, rồi cắt làm <b>2 nửa</b>: trái và phải (Phần B, bước B1).</p>
+      <p>3. <b>Trộn 16 lần.</b> Mỗi lần: đưa nửa phải vào "máy xay" cùng 1 chìa, lấy kết quả trộn vào nửa trái, rồi đổi chỗ 2 nửa (Phần B).</p>
+      <p>4. Ghép 2 nửa lại, xáo chỗ ngược lại là ra <b>bản mã</b> (Phần C).</p>
+    </div>
+    <form class="inputs" id="form" novalidate>
+      <div class="field">
+        <label for="inB">Khối bản rõ (16 ký tự hex = 64 bit)</label>
+        <input id="inB" value="0123456789ABCDEF" maxlength="16" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="inK">Khóa (16 hex hoặc 8 ký tự)</label>
+        <input id="inK" value="133457799BBCDFF1" maxlength="16" autocomplete="off" spellcheck="false">
+      </div>
+      <button class="btn primary" type="submit">Tính lại</button>
+      <button class="btn" type="button" id="btnSample">Dùng ví dụ kinh điển</button>
+      <p class="err" id="err" hidden></p>
+    </form>
+    <div class="summary" id="summary"></div>
+  </header>
+
+  <!-- ================= BẮT ĐẦU ================= -->
+  <section class="part">
+    <div class="part-head"><div class="eyebrow">Bắt đầu</div><h2>Vào gì, ra gì</h2></div>
+
+    <article class="card" id="s-io">
+      <div class="card-title"><span class="step-no">0</span><h3>DES nhận 1 khối 8 byte và 1 khóa 8 byte, trả ra 1 khối 8 byte</h3></div>
+      <div class="io">
+        <div class="lab">Vào 1</div><div class="stack"><div class="row"><span class="tag r">Bản rõ</span><span class="hexline" id="io-b"></span></div><div id="io-bbits"></div></div>
+        <div class="lab">Vào 2</div><div class="row"><span class="tag k">Khóa</span><span class="hexline" id="io-k"></span><span class="mini">bạn tự chọn, 2 bên gửi và nhận dùng chung, giữ bí mật</span></div>
+        <div class="lab">Ra</div><div class="row"><span class="tag f">Bản mã</span><span class="hexline" id="io-c"></span></div>
+      </div>
+      <div class="why">
+        <p><b>Vì sao viết bằng hex (hệ 16)?</b> 64 bit viết ra quá dài. Hex gom <b>cứ 4 bit thành 1 ký tự</b> (0–9, A–F), nên 64 bit chỉ còn 16 ký tự. Ở trên, dưới mỗi ký tự hex là 4 bit của nó. Ví dụ <span class="mono">E</span> = <span class="mono">1110</span>, <span class="mono">F</span> = <span class="mono">1111</span>.</p>
+      </div>
+      <div><div class="codehead">Code · core/des_core.py:289</div><pre id="io-code"></pre></div>
+    </article>
+
+    <article class="card" id="s-num">
+      <div class="card-title"><span class="step-no">0</span><h3>Vì sao số trong code lớn hơn số trên slide đúng 1 đơn vị?</h3></div>
+      <div class="plain">
+        <p>Giống đánh số nhà: slide đếm ô đầu tiên là <b>ô 0</b>, còn code đếm ô đầu tiên là <b>ô 1</b> (code chép bảng từ tài liệu chuẩn quốc tế, mà tài liệu đó đếm từ 1). Cùng một ô, nên số trong code luôn = số trên slide + 1. <b>Bảng không sai.</b></p>
+      </div>
+      <div class="scroll"><table class="sum-table">
+        <thead><tr><th>Bảng</th><th>Slide (đếm từ 0)</th><th>Code core/des_tables.py (đếm từ 1)</th></tr></thead>
+        <tbody>
+          <tr><td class="t">IP</td><td>57 49 41 33 …</td><td>58 50 42 34 …</td></tr>
+          <tr><td class="t">Expand (E)</td><td>31 0 1 2 3 4 …</td><td>32 1 2 3 4 5 …</td></tr>
+          <tr><td class="t">P-box</td><td>15 6 19 20 …</td><td>16 7 20 21 …</td></tr>
+          <tr><td class="t">PC-1</td><td>56 48 40 32 …</td><td>57 49 41 33 …</td></tr>
+        </tbody></table></div>
+      <p class="mini">Trên trang này, chữ nhỏ dưới ô dùng cách đếm của code: "← 58" nghĩa là "lấy bit số 58", tức b57 trên slide.</p>
+    </article>
+
+    <article class="card" id="s-flow">
+      <div class="card-title"><span class="step-no">0</span><h3>Sơ đồ: mã hóa một câu chữ thì hàm nào chạy</h3></div>
+      <p class="mini">Bấm vào một hộp để nhảy tới phần giải thích.</p>
+      <div class="flow">
+        <button class="node" style="--tint: var(--muted)" data-go="s-text" type="button"><span class="nm">app.py · des_file()</span><span class="ds">Đọc ô văn bản hoặc tệp, đọc khóa, gọi các hàm dưới</span></button>
+        <div class="down"><span>parse_des_key(khóa) → 8 byte</span></div>
+        <button class="node" style="--tint: var(--ink)" data-go="s-text" type="button"><span class="nm">utils.des_encrypt_bytes(data, key)</span><span class="ds">core/utils.py:97</span></button>
+        <div class="down"><span>gọi lần lượt</span></div>
+        <div class="branch">
+          <div class="sub">
+            <button class="node" style="--tint: var(--muted)" data-go="s-text" type="button"><span class="nm">① pkcs7_pad()</span><span class="ds">đệm cho đủ bội số 8 byte</span></button>
+          </div>
+          <div class="sub">
+            <button class="node" style="--tint: var(--k)" data-go="s-k0" type="button"><span class="nm">② generate_subkeys()</span><span class="ds">khóa → K1 … K16 (48 bit)</span></button>
+            <button class="node small" style="--tint: var(--k)" data-go="s-k1" type="button"><span class="nm">permute(…, PC1)</span><span class="ds">64 → 56 bit</span></button>
+            <button class="node small" style="--tint: var(--k)" data-go="s-kround" type="button"><span class="nm">rotl() · permute(…, PC2)</span><span class="ds">xoay, rồi 56 → 48 bit</span></button>
+          </div>
+          <div class="sub">
+            <button class="node" style="--tint: var(--r)" data-go="s-ip" type="button"><span class="nm">③ _crypt_blocks()</span><span class="ds">mỗi khối 8 byte: crypt_block</span></button>
+            <button class="node small" style="--tint: var(--r)" data-go="s-ip" type="button"><span class="nm">permute(…, IP)</span><span class="ds">hoán vị khởi tạo</span></button>
+            <button class="node small" style="--tint: var(--f)" data-go="s-a" type="button"><span class="nm">16 × feistel_f()</span><span class="ds">E → ⊕K → 8 S-box → P</span></button>
+            <button class="node small" style="--tint: var(--f)" data-go="s-fp" type="button"><span class="nm">permute(R‖L, IP_INV)</span><span class="ds">đổi chỗ + hoán vị kết thúc</span></button>
+          </div>
+        </div>
+        <div class="down"><span>return bản mã</span></div>
+        <button class="node" style="--tint: var(--f)" data-go="s-res" type="button"><span class="nm">Bản mã</span><span class="ds">dài bằng bội số 8 byte</span></button>
+      </div>
+    </article>
+  </section>
+
+  <!-- ================= PHẦN A: KHÓA ================= -->
+  <section class="part">
+    <div class="part-head">
+      <div class="eyebrow">Phần A · slide 79 · hàm generate_subkeys()</div>
+      <h2>Làm 16 chìa nhỏ K1 … K16 từ mật khẩu</h2>
+      <p class="lead">DES trộn 16 lần, mỗi lần cần một chìa riêng. Cách làm giống TinyDES: <b>cắt đôi → xoay → chọn bớt ô</b>. Chỉ thêm một bước bỏ 8 ô thừa ở đầu, và làm 16 lần thay vì 3.</p>
+    </div>
+
+    <article class="card" id="s-k0">
+      <div class="card-title"><span class="step-no">A1</span><h3>Biến mật khẩu thành 64 ô 0/1</h3></div>
+      <div class="io">
+        <div class="lab">Vào</div><div id="k0-in"></div>
+        <div class="lab">Làm</div><div>Nếu gõ 16 ký tự hex: cứ 2 ký tự là 1 byte (8 ô). Nếu gõ 8 chữ thường: mỗi chữ có sẵn một "số báo danh" (ví dụ chữ <span class="mono">n</span> là 6E), đổi ra 8 ô. 8 byte × 8 ô = 64 ô.</div>
+        <div class="lab">Ra</div><div id="k0-out"></div>
+      </div>
+      <div class="why"><p><b>Ô mờ là ô thừa</b>, nằm ở cuối mỗi byte (ô 8, 16, …, 64). Ngày xưa ô này dùng để kiểm tra gõ sai, DES <b>không dùng</b> nó và bỏ đi ở bước sau. Vì vậy mật khẩu 64 ô nhưng chỉ <b>56 ô</b> có tác dụng. Thử nghiệm vui: mật khẩu <span class="mono">nhom2026</span> và <span class="mono">nhom2027</span> mở được cho nhau, vì chữ '6' và '7' chỉ khác đúng ô thừa này.</p></div>
+      <div><div class="codehead">Code · core/utils.py:65 và core/des_core.py:70</div>
+<pre>key = utils.<span class="fn">parse_des_key</span>(text)        <span class="c"># 16 hex hoặc 8 ký tự → 8 byte</span>
+k64 = int.from_bytes(key, "big")          <span class="c"># 8 byte → 1 số 64 bit</span></pre></div>
+    </article>
+
+    <article class="card" id="s-k1">
+      <div class="card-title"><span class="step-no">A2</span><h3>Bỏ 8 ô thừa, xếp lại 56 ô còn lại (bảng PC-1)</h3></div>
+      <div class="io">
+        <div class="lab">Vào</div><div>64 ô ở bước A1. Màu viền cho biết ô đó thuộc byte thứ mấy của mật khẩu.</div>
+        <div class="lab">Làm</div><div>Có một bảng cố định (tên là PC-1, slide 79) ghi: "ô mới số 1 chép từ ô cũ số <b>57</b>, ô mới số 2 chép từ ô <b>49</b>, …". Làm theo bảng là xong. Bảng không có các số 8, 16, …, 64, nên 8 ô thừa bị bỏ: 64 ô còn 56.</div>
+        <div class="lab">Ra</div><div id="k1-out"></div>
+      </div>
+      <div><div class="codehead">Code · core/des_core.py:72</div>
+      <pre>k56 = <span class="fn">permute</span>(k64, PC1, 64)     <span class="c"># bit thứ i của kết quả = bit số PC1[i] của đầu vào</span></pre></div>
+    </article>
+
+    <article class="card" id="s-k2">
+      <div class="card-title"><span class="step-no">A3</span><h3>Cắt 56 ô làm 2 nửa, mỗi nửa 28 ô: C0 và D0</h3></div>
+      <div class="io">
+        <div class="lab">Vào</div><div class="mono" id="k2-in"></div>
+        <div class="lab">Ra</div><div class="stack" id="k2-out"></div>
+      </div>
+      <p class="mini">Slide gọi là KL0 và KR0. Code và sách tiếng Anh gọi là C0 và D0.</p>
+      <div><div class="codehead">Code · core/des_core.py:74</div>
+<pre>c, d = k56 >> 28, k56 &amp; 0x0FFFFFFF
+<span class="c"># ">> 28": đẩy bỏ 28 bit phải, còn 28 bit trái = C0
+# "&amp; 0x0FFFFFFF" (28 số 1): chỉ giữ 28 bit phải = D0</span></pre></div>
+    </article>
+
+    <article class="card" id="s-kwhy">
+      <div class="card-title"><span class="step-no">A?</span><h3>Mỗi vòng xoay 1 hay 2 bit? Số đó lấy ở đâu?</h3></div>
+      <div class="why">
+        <p><b>Không tính ra từ dữ liệu. Đó là luật cố định của DES</b>, ghi ở slide 79:</p>
+        <p class="mono">rᵢ = 1 nếu i ∈ {1, 2, 9, 16}; rᵢ = 2 với những vòng còn lại</p>
+        <p>Khóa nào cũng xoay đúng như vậy. Code chép luật này thành một danh sách:</p>
+        <pre>SHIFTS = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]</pre>
+      </div>
+      <div class="row" id="shift-chips"></div>
+      <div class="plain">
+        <p><b>Xoay trái 1 bit:</b> bit đầu chạy ra cuối. <b>Xoay 2 bit:</b> làm vậy 2 lần.</p>
+        <p>Cộng lại: 1+1+2+2+2+2+2+2+1+2+2+2+2+2+2+1 = <b>28</b> = đúng độ dài mỗi nửa. Nên sau vòng 16, C16 = C0 và D16 = D0, quay đủ một vòng. TinyDES cũng vậy: 1+2+1 = 4.</p>
+      </div>
+    </article>
+
+    <article class="card" id="s-kround">
+      <div class="card-title"><span class="step-no">A4</span><h3 id="kr-title"></h3></div>
+      <p class="mini">Chọn vòng:</p>
+      <div class="chips" id="kr-chips"></div>
+      <div class="io">
+        <div class="lab">Vào</div><div class="stack" id="kr-in"></div>
+        <div class="lab">Làm 1</div><div id="kr-do1"></div>
+        <div class="lab">Ra 1</div><div class="stack" id="kr-rot"></div>
+        <div class="lab">Làm 2</div><div><b>Chọn 48 ô làm chìa:</b> ghép 2 nửa C, D lại (56 ô), rồi làm theo bảng cố định PC-2: "ô 1 của chìa chép từ ô <b>14</b>, ô 2 chép từ ô <b>17</b>, …". Bảng bỏ qua 8 ô, nên 56 còn 48. Giống bước "chọn 6 trong 8 ô" của TinyDES.</div>
+        <div class="lab">Ra 2</div><div class="stack" id="kr-out"></div>
+      </div>
+      <div><div class="codehead">Code · core/des_core.py:81-88</div><pre id="kr-code"></pre></div>
+      <div class="scroll" id="kr-table"></div>
+    </article>
+  </section>
+
+  <!-- ================= PHẦN B: MÃ HÓA ================= -->
+  <section class="part">
+    <div class="part-head">
+      <div class="eyebrow">Phần B · slide 74–78 · hàm crypt_block_verbose() và feistel_f()</div>
+      <h2>Xáo chỗ, cắt đôi, rồi trộn 16 lần</h2>
+      <p class="lead">"Vòng Feistel" chỉ là tên gọi của <b>một lần trộn</b>. DES trộn 16 lần, lần nào cũng làm y hệt nhau, chỉ đổi chìa.</p>
+    </div>
+
+    <article class="card" id="s-ip">
+      <div class="card-title"><span class="step-no">B1</span><h3>Xáo chỗ 64 ô (bảng IP), rồi cắt làm nửa trái L0 và nửa phải R0</h3></div>
+      <div class="io">
+        <div class="lab">Vào</div><div id="ip-in"></div>
+        <div class="lab">Làm</div><div>Làm theo bảng cố định IP (slide 75, bảng trái): "ô mới số 1 chép từ ô <b>58</b>, ô mới số 2 chép từ ô <b>50</b>, …". Giống xếp lại chỗ ngồi trong lớp theo sơ đồ có sẵn. TinyDES không có bước này.</div>
+        <div class="lab">Ra</div><div class="stack" id="ip-out"></div>
+      </div>
+      <div class="why"><p><b>Bước này có làm mã khó phá hơn không?</b> Không. Sơ đồ xếp chỗ ai cũng biết. Nó có từ thời làm chip điện tử những năm 1970, để chip nạp dữ liệu cho tiện.</p></div>
+      <div><div class="codehead">Code · core/des_core.py:154-156</div>
+<pre>b = int.from_bytes(block, "big")
+ip = <span class="fn">permute</span>(b, IP, 64)
+left, right = ip >> 32, ip &amp; 0xFFFFFFFF     <span class="c"># 32 bit trái = L0, 32 bit phải = R0</span></pre></div>
+    </article>
+
+    <article class="card" id="s-round">
+      <div class="card-title"><span class="step-no">B2</span><h3>Một lần trộn làm gì? Giống hệt TinyDES</h3></div>
+      <div class="plain">
+        <p>Hình dung 2 bạn <span class="tag l">L</span> (trái) và <span class="tag r">R</span> (phải) chuyền bóng:</p>
+        <p>1. <span class="tag r">R</span> được bỏ vào <span class="tag f">máy xay</span> cùng chìa <span class="tag k">Ki</span>. Máy xay làm 4 việc a, b, c, d rồi nhả ra 32 ô, gọi là <b>F</b>.</p>
+        <p>2. Lấy <span class="tag l">L</span> trộn với <b>F</b> (so từng cặp ô: giống → 0, khác → 1). Kết quả thành <b>nửa phải mới</b> (việc e).</p>
+        <p>3. <span class="tag r">R</span> cũ <b>không bị đổi gì</b>, chỉ chuyển sang làm <b>nửa trái mới</b> (việc f).</p>
+        <p class="mini">Trên slide viết gọn thành công thức: Lᵢ = Rᵢ₋₁ ; Rᵢ = Lᵢ₋₁ ⊕ F(Rᵢ₋₁, Kᵢ). Nghĩa đúng như 3 câu trên.</p>
+      </div>
+      <p class="mini">Chọn vòng để xem (16 vòng làm y hệt nhau, chỉ đổi chìa):</p>
+      <div class="chips" id="rd-chips"></div>
+      <div class="io">
+        <div class="lab">Vào</div><div class="stack" id="rd-in"></div>
+        <div class="lab">Chìa</div><div id="rd-key"></div>
+      </div>
+      <div><div class="codehead">Code · core/des_core.py:158-160</div>
+<pre>for i, k in enumerate(subkeys, start=1):          <span class="c"># 16 vòng</span>
+    left, right = right, left ^ <span class="fn">feistel_f</span>(right, k)
+<span class="c">#   L mới = R cũ ;  R mới = L cũ XOR F(R cũ, Ki)        "^" là XOR của Python</span></pre></div>
+    </article>
+
+    <article class="card" id="s-a">
+      <div class="card-title"><span class="step-no">a</span><h3>Kéo dài nửa phải từ 32 ô thành 48 ô (Expand)</h3></div>
+      <div class="io">
+        <div class="lab">Vào</div><div id="a-in"></div>
+        <div class="lab">Làm</div><div>Chia 32 ô thành 8 nhóm, mỗi nhóm 4 ô (8 màu). Mỗi nhóm <b>mượn thêm 1 ô của nhóm bên trái và 1 ô của nhóm bên phải</b>, thành 6 ô. Nhóm đầu không có ai bên trái thì mượn ô cuối cùng (ô 32), giống ngồi quanh bàn tròn. 8 nhóm × 6 ô = 48 ô.</div>
+        <div class="lab">Ra</div><div id="a-out"></div>
+      </div>
+      <div class="why"><p><b>Vì sao phải kéo dài?</b> Chìa dài 48 ô. Muốn trộn với chìa thì nửa phải cũng phải dài 48 ô.</p></div>
+      <div><div class="codehead">Code · core/des_core.py:131</div><pre>e = <span class="fn">permute</span>(r32, E, 32)      <span class="c"># E = [32, 1, 2, 3, 4, 5,  4, 5, 6, 7, 8, 9, ...]</span></pre></div>
+    </article>
+
+    <article class="card" id="s-b">
+      <div class="card-title"><span class="step-no">b</span><h3>Trộn với chìa (phép XOR)</h3></div>
+      <div class="io">
+        <div class="lab">Làm</div><div>Đặt 48 ô vừa kéo dài và 48 ô của chìa thẳng cột với nhau. Từng cặp: <b>giống nhau → 0, khác nhau → 1</b>. Bảng dưới chia 8 nhóm 6 ô cho dễ nhìn, mỗi nhóm sẽ đi vào 1 bảng tra ở bước c.</div>
+      </div>
+      <div class="scroll" id="b-table"></div>
+      <div class="why"><p><b>Chỗ duy nhất chìa khóa được trộn vào dữ liệu.</b></p></div>
+      <div><div class="codehead">Code · core/des_core.py:132</div><pre>x = e ^ k48</pre></div>
+    </article>
+
+    <article class="card" id="s-c">
+      <div class="card-title"><span class="step-no">c</span><h3>Tra 8 bảng (S-box): mỗi nhóm 6 ô đổi thành 4 ô</h3></div>
+      <div class="io">
+        <div class="lab">Làm</div><div>Có 8 bảng tra cố định tên S1 … S8. Nhóm 1 tra bảng S1, nhóm 2 tra S2, … Cách tra <b>y hệt TinyDES</b>, giống tra bảng cửu chương: ô <b>đầu + ô cuối</b> cho biết <b>số hàng</b>, <b>4 ô giữa</b> cho biết <b>số cột</b>, đọc con số ở ô đó rồi đổi ra 4 ô 0/1. 8 nhóm × 4 ô = 32 ô. Bấm một dòng để xem bảng tra của nhóm đó.</div>
+      </div>
+      <div class="scroll" id="c-table"></div>
+      <div class="io"><div class="lab">Ra</div><div id="c-out"></div></div>
+      <h3 id="c-box-title" style="font-size:16px"></h3>
+      <div class="scroll" id="c-box"></div>
+      <p class="mini">Bảng ghi ở hệ 16 (A = 10 … F = 15). Hàng tô cam, cột tô xanh, ô vàng là kết quả. S1 chính là bảng S-box của TinyDES (slide 78). S1–S8 ở slide 80–81.</p>
+      <div><div class="codehead">Code · core/des_core.py:108-116</div>
+<pre>for i in range(8):                              <span class="c"># S1 … S8</span>
+    chunk = (x48 >> (42 - 6 * i)) &amp; 0x3F        <span class="c"># lấy nhóm 6 bit thứ i</span>
+    row = ((chunk >> 4) &amp; 0b10) | (chunk &amp; 1)   <span class="c"># bit đầu + bit cuối</span>
+    col = (chunk >> 1) &amp; 0xF                    <span class="c"># 4 bit giữa</span>
+    out = (out << 4) | S_BOX[i][row][col]       <span class="c"># gắn 4 bit kết quả vào cuối</span></pre></div>
+    </article>
+
+    <article class="card" id="s-d">
+      <div class="card-title"><span class="step-no">d</span><h3>Xáo chỗ 32 ô (P-box), ra F</h3></div>
+      <div class="io">
+        <div class="lab">Vào</div><div id="d-in"></div>
+        <div class="lab">Làm</div><div>Lại làm theo một bảng xếp chỗ cố định (bảng P, slide 78): "ô mới số 1 chép từ ô <b>16</b>, ô mới số 2 chép từ ô <b>7</b>, …". Màu cho biết ô đó ra từ bảng tra nào. Sau bước này, kết quả của mỗi bảng tra bị rải đi khắp nơi, nên lần trộn sau sẽ lẫn vào nhau nhiều hơn.</div>
+        <div class="lab">Ra</div><div id="d-out"></div>
+      </div>
+      <div><div class="codehead">Code · core/des_core.py:134</div><pre>f = <span class="fn">permute</span>(s, P, 32)</pre></div>
+    </article>
+
+    <article class="card" id="s-e">
+      <div class="card-title"><span class="step-no">e</span><h3>Nửa phải mới = L ⊕ F</h3></div>
+      <div class="scroll" id="e-table"></div>
+    </article>
+
+    <article class="card" id="s-f">
+      <div class="card-title"><span class="step-no">f</span><h3>Đổi chỗ: R cũ sang làm L mới</h3></div>
+      <div class="scroll" id="f-svg"></div>
+      <p class="mini" id="f-next"></p>
+    </article>
+  </section>
+
+  <!-- ================= PHẦN C ================= -->
+  <section class="part">
+    <div class="part-head">
+      <div class="eyebrow">Kết quả · slide 74–75</div>
+      <h2>Trộn đủ 16 lần, ghép lại, ra bản mã</h2>
+    </div>
+
+    <article class="card" id="s-16">
+      <div class="card-title"><span class="step-no">C1</span><h3>16 vòng liền nhau</h3></div>
+      <p class="mini">Bấm một dòng để mở vòng đó ở phần B. Mẹo kiểm tra: cột L của mỗi vòng = cột R của vòng ngay trên.</p>
+      <div class="scroll" id="t16"></div>
+    </article>
+
+    <article class="card" id="s-fp">
+      <div class="card-title"><span class="step-no">C2</span><h3>Ghép 2 nửa (phải trước, trái sau), xáo chỗ ngược lại → bản mã</h3></div>
+      <div class="io">
+        <div class="lab">Vào</div><div class="stack" id="fp-in"></div>
+        <div class="lab">Làm</div><div>Ghép <b>nửa phải trước, nửa trái sau</b>, rồi làm theo bảng IP⁻¹ (slide 75, bảng phải). Bảng này là <b>bảng xếp chỗ ngược</b> của bước B1, giống trả học sinh về lại chỗ ngồi cũ.</div>
+        <div class="lab">Ra</div><div class="stack" id="fp-out"></div>
+      </div>
+      <div class="why"><p><b>Vì sao ghép phải trước, trái sau?</b> Để người nhận giải mã bằng <b>đúng cái máy mã hóa</b>, chỉ cần dùng chìa theo thứ tự ngược K16 → K1. Không phải làm thêm cái máy nào khác.</p></div>
+      <div><div class="codehead">Code · core/des_core.py:166</div>
+<pre>out = <span class="fn">permute</span>((right << 32) | left, IP_INV, 64)    <span class="c"># right (R16) đứng trước</span></pre></div>
+    </article>
+
+    <article class="card" id="s-res">
+      <div class="card-title"><span class="step-no">C3</span><h3>Kết quả</h3></div>
+      <div class="io"><div class="lab">Ra</div><div class="row" id="res-out"></div></div>
+    </article>
+
+    <article class="card" id="s-dec">
+      <div class="card-title"><span class="step-no">D</span><h3>Giải mã: chạy y hệt, chỉ đảo thứ tự chìa K16 → K1</h3></div>
+      <div class="scroll" id="dec-table"></div>
+      <div class="why"><p><b>Vì sao gỡ ra được?</b> Mỗi vòng chỉ XOR thêm F vào một nửa, nửa kia giữ nguyên. Đi ngược với chìa ngược thì tính lại được đúng F đó, XOR lần 2 là triệt tiêu.</p></div>
+      <div><div class="codehead">Code · core/des_core.py:306</div>
+<pre>sk = prepare_keys(<span class="fn">generate_subkeys</span>(key)[::-1])   <span class="c"># [::-1] đảo [K1..K16] thành [K16..K1]</span></pre></div>
+    </article>
+
+    <article class="card" id="s-text">
+      <div class="card-title"><span class="step-no">T</span><h3>Câu chữ thật: đệm cho đủ 8 byte, rồi mã từng khối</h3></div>
+      <div class="inputs" style="padding:12px">
+        <div class="field"><label for="inT">Gõ thử một câu (dùng khóa ở trên)</label><input id="inT" class="wide" value="Xin chào" maxlength="40" autocomplete="off" spellcheck="false"></div>
+      </div>
+      <div class="io">
+        <div class="lab">Bước 1</div><div class="stack" id="t-bytes"></div>
+        <div class="lab">Bước 2</div><div class="stack" id="t-pad"></div>
+        <div class="lab">Bước 3</div><div class="stack" id="t-enc"></div>
+        <div class="lab">Bước 4</div><div class="stack" id="t-dec"></div>
+      </div>
+      <div class="why"><p><b>Đệm giống đóng hàng vào thùng 8 ô:</b> thiếu ô nào nhét giấy độn, trên mỗi tờ ghi số tờ đã độn. Lúc mở, nhìn tờ cuối ghi số mấy là bỏ đi bấy nhiêu tờ. Dữ liệu tròn 8 byte vẫn độn nguyên một khối <span class="mono">08 × 8</span>, để không nhầm chữ thật với giấy độn.</p></div>
+      <div><div class="codehead">Code · core/utils.py:16-26 và 97-112</div>
+<pre>n = 8 - len(data) % 8                       <span class="c"># số byte cần độn (1..8)</span>
+padded = data + bytes([n]) * n              <span class="c"># độn n byte, mỗi byte giá trị n</span>
+cipher = <span class="fn">_crypt_blocks</span>(padded, generate_subkeys(key))         <span class="c"># mã từng khối 8 byte</span>
+plain  = <span class="fn">pkcs7_unpad</span>(_crypt_blocks(cipher, generate_subkeys(key)[::-1]))</pre></div>
+    </article>
+  </section>
+</div>
+
+<nav class="stepper" aria-label="Đi từng bước">
+  <div class="progress"><i id="prog"></i></div>
+  <div class="in">
+    <button class="btn" type="button" id="prev">← Trước</button>
+    <div class="where" id="where"></div>
+    <button class="btn primary" type="button" id="next">Tiếp →</button>
+  </div>
+</nav>
+
+<script>
+(function () {
+  // ===== Bảng DES, chép đúng core/des_tables.py (đánh số từ 1) =====
+  var IP = [58,50,42,34,26,18,10,2,60,52,44,36,28,20,12,4,62,54,46,38,30,22,14,6,64,56,48,40,32,24,16,8,
+            57,49,41,33,25,17,9,1,59,51,43,35,27,19,11,3,61,53,45,37,29,21,13,5,63,55,47,39,31,23,15,7];
+  var IP_INV = [40,8,48,16,56,24,64,32,39,7,47,15,55,23,63,31,38,6,46,14,54,22,62,30,37,5,45,13,53,21,61,29,
+                36,4,44,12,52,20,60,28,35,3,43,11,51,19,59,27,34,2,42,10,50,18,58,26,33,1,41,9,49,17,57,25];
+  var E = [32,1,2,3,4,5,4,5,6,7,8,9,8,9,10,11,12,13,12,13,14,15,16,17,16,17,18,19,20,21,20,21,22,23,24,25,
+           24,25,26,27,28,29,28,29,30,31,32,1];
+  var P = [16,7,20,21,29,12,28,17,1,15,23,26,5,18,31,10,2,8,24,14,32,27,3,9,19,13,30,6,22,11,4,25];
+  var PC1 = [57,49,41,33,25,17,9,1,58,50,42,34,26,18,10,2,59,51,43,35,27,19,11,3,60,52,44,36,
+             63,55,47,39,31,23,15,7,62,54,46,38,30,22,14,6,61,53,45,37,29,21,13,5,28,20,12,4];
+  var PC2 = [14,17,11,24,1,5,3,28,15,6,21,10,23,19,12,4,26,8,16,7,27,20,13,2,
+             41,52,31,37,47,55,30,40,51,45,33,48,44,49,39,56,34,53,46,42,50,36,29,32];
+  var SHIFTS = [1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1];
+  var S = [
+    [[14,4,13,1,2,15,11,8,3,10,6,12,5,9,0,7],[0,15,7,4,14,2,13,1,10,6,12,11,9,5,3,8],[4,1,14,8,13,6,2,11,15,12,9,7,3,10,5,0],[15,12,8,2,4,9,1,7,5,11,3,14,10,0,6,13]],
+    [[15,1,8,14,6,11,3,4,9,7,2,13,12,0,5,10],[3,13,4,7,15,2,8,14,12,0,1,10,6,9,11,5],[0,14,7,11,10,4,13,1,5,8,12,6,9,3,2,15],[13,8,10,1,3,15,4,2,11,6,7,12,0,5,14,9]],
+    [[10,0,9,14,6,3,15,5,1,13,12,7,11,4,2,8],[13,7,0,9,3,4,6,10,2,8,5,14,12,11,15,1],[13,6,4,9,8,15,3,0,11,1,2,12,5,10,14,7],[1,10,13,0,6,9,8,7,4,15,14,3,11,5,2,12]],
+    [[7,13,14,3,0,6,9,10,1,2,8,5,11,12,4,15],[13,8,11,5,6,15,0,3,4,7,2,12,1,10,14,9],[10,6,9,0,12,11,7,13,15,1,3,14,5,2,8,4],[3,15,0,6,10,1,13,8,9,4,5,11,12,7,2,14]],
+    [[2,12,4,1,7,10,11,6,8,5,3,15,13,0,14,9],[14,11,2,12,4,7,13,1,5,0,15,10,3,9,8,6],[4,2,1,11,10,13,7,8,15,9,12,5,6,3,0,14],[11,8,12,7,1,14,2,13,6,15,0,9,10,4,5,3]],
+    [[12,1,10,15,9,2,6,8,0,13,3,4,14,7,5,11],[10,15,4,2,7,12,9,5,6,1,13,14,0,11,3,8],[9,14,15,5,2,8,12,3,7,0,4,10,1,13,11,6],[4,3,2,12,9,5,15,10,11,14,1,7,6,0,8,13]],
+    [[4,11,2,14,15,0,8,13,3,12,9,7,5,10,6,1],[13,0,11,7,4,9,1,10,14,3,5,12,2,15,8,6],[1,4,11,13,12,3,7,14,10,15,6,8,0,5,9,2],[6,11,13,8,1,4,10,7,9,5,0,15,14,2,3,12]],
+    [[13,2,8,4,6,15,11,1,10,9,3,14,5,0,12,7],[1,15,13,8,10,3,7,4,12,5,6,11,0,14,9,2],[7,11,4,1,9,12,14,2,0,6,10,13,15,3,5,8],[2,1,14,7,4,10,8,13,15,12,9,0,3,5,6,11]]
+  ];
+
+  // ===== Thuật toán (trên chuỗi '0'/'1' cho dễ vẽ; kết quả giống core/des_core.py) =====
+  function perm(b, t) { var s = ""; for (var i = 0; i < t.length; i++) s += b[t[i] - 1]; return s; }
+  function rot(b, n) { return b.slice(n) + b.slice(0, n); }
+  function xor(a, b) { var s = ""; for (var i = 0; i < a.length; i++) s += a[i] === b[i] ? "0" : "1"; return s; }
+  function bin(n, w) { var s = n.toString(2); while (s.length < w) s = "0" + s; return s; }
+  function b2h(b) { var h = ""; for (var i = 0; i < b.length; i += 4) h += parseInt(b.slice(i, i + 4), 2).toString(16).toUpperCase(); return h; }
+  function bytesToBits(arr) { var s = ""; for (var i = 0; i < arr.length; i++) s += bin(arr[i], 8); return s; }
+  function bitsToBytes(b) { var a = []; for (var i = 0; i < b.length; i += 8) a.push(parseInt(b.slice(i, i + 8), 2)); return a; }
+  function hexBytes(arr) { return arr.map(function (x) { return bin(x, 8) && x.toString(16).toUpperCase().padStart(2, "0"); }).join(" "); }
+
+  function parseKey(text) {
+    text = text.trim();
+    if (text.length === 16 && /^[0-9a-fA-F]+$/.test(text)) {
+      var a = []; for (var i = 0; i < 16; i += 2) a.push(parseInt(text.slice(i, i + 2), 16));
+      return { bytes: a, how: "hex" };
+    }
+    var u = Array.from(new TextEncoder().encode(text));
+    if (u.length === 8) return { bytes: u, how: "text" };
+    return null;
+  }
+  function genKeys(k64) {
+    var k56 = perm(k64, PC1), c = k56.slice(0, 28), d = k56.slice(28), out = [];
+    for (var i = 0; i < 16; i++) {
+      var s = SHIFTS[i], c0 = c, d0 = d;
+      var mc = s === 2 ? rot(c, 1) : null, md = s === 2 ? rot(d, 1) : null;
+      c = rot(c, s); d = rot(d, s);
+      out.push({ n: i + 1, s: s, cPrev: c0, dPrev: d0, cMid: mc, dMid: md, c: c, d: d, k: perm(c + d, PC2) });
+    }
+    return { k56: k56, rounds: out };
+  }
+  function feistel(r, k) {
+    var e = perm(r, E), x = xor(e, k), s = "", boxes = [];
+    for (var i = 0; i < 8; i++) {
+      var g = x.slice(6 * i, 6 * i + 6), row = parseInt(g[0] + g[5], 2), col = parseInt(g.slice(1, 5), 2), v = S[i][row][col];
+      boxes.push({ i: i, g: g, ge: e.slice(6 * i, 6 * i + 6), gk: k.slice(6 * i, 6 * i + 6), row: row, col: col, v: v, o: bin(v, 4) });
+      s += bin(v, 4);
+    }
+    return { e: e, x: x, s: s, boxes: boxes, f: perm(s, P) };
+  }
+  function cryptBlock(b64, keys) {
+    var ip = perm(b64, IP), L = ip.slice(0, 32), R = ip.slice(32), rounds = [];
+    for (var i = 0; i < keys.length; i++) {
+      var F = feistel(R, keys[i]), nR = xor(L, F.f);
+      rounds.push({ idx: i, k: keys[i], L: L, R: R, F: F, nL: R, nR: nR });
+      L = R; R = nR;
+    }
+    var pre = R + L;
+    return { ip: ip, rounds: rounds, pre: pre, out: perm(pre, IP_INV) };
+  }
+
+  // ===== Vẽ =====
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function ct(i) { return "var(--c" + (i % 8) + ")"; }
+  function cell(b, tint, lab, extra) {
+    return '<span class="bit ' + (b === "1" ? "one " : "") + (extra || "") + '" style="--tint:' + tint + '">' + b + (lab != null ? "<small>" + esc(lab) + "</small>" : "") + "</span>";
+  }
+  // vẽ dãy bit, gom thành nhóm `size` ô; tint(i), lab(i), extra(i) là hàm theo vị trí 0-based
+  function grid(bits, size, tint, lab, extra, gname) {
+    var h = '<span class="bits">';
+    for (var i = 0; i < bits.length; i += size) {
+      h += '<span class="gname">' + '<span class="g">';
+      for (var j = i; j < Math.min(i + size, bits.length); j++) h += cell(bits[j], tint(j), lab ? lab(j) : null, extra ? extra(j) : "");
+      h += "</span>" + (gname ? gname(i / size) : "") + "</span>";
+    }
+    return h + "</span>";
+  }
+  function tag(c, t) { return '<span class="tag ' + c + '">' + t + "</span>"; }
+  function row() { return '<div class="row">' + Array.prototype.join.call(arguments, "") + "</div>"; }
+  function mono(t) { return '<b class="mono">' + t + "</b>"; }
+  function hexUnder(bits) {
+    // mỗi ký tự hex kèm 4 bit bên dưới
+    var h = '<span class="bits">';
+    for (var i = 0; i < bits.length; i += 4) {
+      var nib = bits.slice(i, i + 4);
+      h += '<span class="gname"><span class="g">';
+      for (var j = 0; j < 4; j++) h += cell(nib[j], ct(Math.floor(i / 8)), null, "");
+      h += '</span><b class="mono" style="font-size:14px;color:var(--ink)">' + b2h(nib) + "</b></span>";
+    }
+    return h + "</span>";
+  }
+
+  var st = { block: "0123456789ABCDEF", key: "133457799BBCDFF1", kr: 0, rd: 0, sb: 0 };
+  var D = null;
+
+  function compute() {
+    var kb = parseKey(st.key), b64 = bytesToBits(Array.from({ length: 8 }, function (_, i) { return parseInt(st.block.slice(2 * i, 2 * i + 2), 16); }));
+    var k64 = bytesToBits(kb.bytes), ks = genKeys(k64), keys = ks.rounds.map(function (r) { return r.k; });
+    var enc = cryptBlock(b64, keys), dec = cryptBlock(enc.out, keys.slice().reverse());
+    D = { kb: kb, k64: k64, ks: ks, keys: keys, b64: b64, enc: enc, dec: dec };
+  }
+
+  function renderTop() {
+    var c = b2h(D.enc.out);
+    $("summary").innerHTML = tag("r", "Bản rõ") + ' <span class="mono">' + st.block + '</span><span class="arrow">+</span>' + tag("k", "Khóa") +
+      ' <span class="mono">' + esc(st.key) + '</span><span class="arrow">→ 16 vòng →</span>' + tag("f", "Bản mã") + " " + mono(c);
+    $("io-b").textContent = st.block.replace(/(..)/g, "$1 ").trim();
+    $("io-bbits").innerHTML = hexUnder(D.b64);
+    $("io-k").textContent = hexBytes(D.kb.bytes);
+    $("io-c").textContent = c.replace(/(..)/g, "$1 ").trim();
+    $("io-code").innerHTML = '<span class="fn">encrypt_block</span>(bytes.fromhex("' + st.block + '"), key)\n<span class="c"># → bytes ' + c.replace(/(..)/g, "$1 ").trim() + "</span>";
+  }
+
+  function renderKeys() {
+    var k64 = D.k64, how = D.kb.how;
+    var keyText = how === "hex" ? row(tag("k", "Khóa"), mono(esc(st.key)), '<span class="mini">16 ký tự hex</span>')
+      : row(tag("k", "Khóa"), mono(esc(st.key)), '<span class="mini">8 ký tự → mã ASCII: ' + hexBytes(D.kb.bytes) + "</span>");
+    $("k0-in").innerHTML = keyText;
+    $("k0-out").innerHTML = grid(k64, 8, function (i) { return ct(Math.floor(i / 8)); }, function (i) { return String(i + 1); },
+      function (i) { return (i + 1) % 8 === 0 ? "dim" : ""; }, function (g) { return "byte " + (g + 1) + " · " + D.kb.bytes[g].toString(16).toUpperCase().padStart(2, "0"); });
+    var k56 = D.ks.k56;
+    $("k1-out").innerHTML = '<div class="stack">' + grid(k56, 7, function (i) { return ct(Math.floor((PC1[i] - 1) / 8)); }, function (i) { return "←" + PC1[i]; }) +
+      row(mono(b2h(k56)), '<span class="mini">(56 bit, hex)</span>') + "</div>";
+    $("k2-in").textContent = b2h(k56);
+    var c0 = k56.slice(0, 28), d0 = k56.slice(28);
+    $("k2-out").innerHTML = row(tag("k", "C0"), grid(c0, 7, function () { return "var(--k)"; }, null), mono(b2h(c0))) +
+      row(tag("k", "D0"), grid(d0, 7, function () { return "var(--c4)"; }, null), mono(b2h(d0)));
+    $("shift-chips").innerHTML = SHIFTS.map(function (s, i) { return '<span class="shift-chip ' + (s === 1 ? "one" : "") + '"><small>vòng ' + (i + 1) + "</small>" + s + "</span>"; }).join("");
+    $("kr-chips").innerHTML = D.ks.rounds.map(function (r, i) {
+      return '<button class="chip" type="button" data-kr="' + i + '" aria-pressed="' + (i === st.kr) + '">' + r.n + "<small>xoay " + r.s + "</small></button>";
+    }).join("");
+    renderKeyRound();
+    var t = '<table class="sum-table"><thead><tr><th>Vòng</th><th>Xoay</th><th>C (hex)</th><th>D (hex)</th><th>Khóa con Kᵢ (hex)</th></tr></thead><tbody>';
+    D.ks.rounds.forEach(function (r, i) {
+      t += '<tr class="click ' + (i === st.kr ? "sel" : "") + '" data-kr="' + i + '"><td class="t">K' + r.n + "</td><td>" + r.s + "</td><td>" + h28(r.c) +
+        "</td><td>" + h28(r.d) + "</td><td><b>" + b2h(r.k) + "</b></td></tr>";
+    });
+    $("kr-table").innerHTML = t + "</tbody></table>";
+  }
+  function h28(b) { return b2h("0000" + b).slice(1); }
+  function renderKeyRound() {
+    var r = D.ks.rounds[st.kr], n = r.n, prev = n - 1;
+    $("kr-title").textContent = "Vòng " + n + ": xoay " + r.s + " bit mỗi nửa, rồi PC-2 → K" + n;
+    document.querySelectorAll("[data-kr]").forEach(function (b) {
+      if (b.tagName === "BUTTON") b.setAttribute("aria-pressed", String(+b.dataset.kr === st.kr));
+      else b.classList.toggle("sel", +b.dataset.kr === st.kr);
+    });
+    var C = function () { return "var(--k)"; }, Dc = function () { return "var(--c4)"; };
+    $("kr-in").innerHTML = row(tag("k", "C" + prev), grid(r.cPrev, 7, C, null), mono(h28(r.cPrev))) +
+      row(tag("k", "D" + prev), grid(r.dPrev, 7, Dc, null), mono(h28(r.dPrev))) +
+      (n > 1 ? '<p class="mini">Đây là kết quả vòng ' + prev + ", không phải C0, D0.</p>" : "");
+    $("kr-do1").innerHTML = "Luật slide 79: vòng " + n + " xoay <b>" + r.s + " bit</b>" + (r.s === 1 ? " (vì " + n + " ∈ {1, 2, 9, 16})" : " (vòng thường)") +
+      ". Bit đầu chạy ra cuối" + (r.s === 2 ? ", làm 2 lần." : ".");
+    var mid = r.s === 2 ? row('<span class="mini">xoay lần 1:</span>', mono(h28(r.cMid)), mono(h28(r.dMid))) : "";
+    $("kr-rot").innerHTML = mid + row(tag("k", "C" + n), grid(r.c, 7, C, null), mono(h28(r.c))) + row(tag("k", "D" + n), grid(r.d, 7, Dc, null), mono(h28(r.d)));
+    var cd = r.c + r.d;
+    $("kr-out").innerHTML = grid(r.k, 6, function (i) { return PC2[i] <= 28 ? "var(--k)" : "var(--c4)"; }, function (i) { return "←" + PC2[i]; }) +
+      row(tag("k", "K" + n), mono(b2h(r.k)), '<span class="mini">tím = lấy từ C, xanh = lấy từ D</span>');
+    $("kr-code").innerHTML = "c, d = <span class=\"fn\">rotl</span>(c, " + r.s + ", 28), <span class=\"fn\">rotl</span>(d, " + r.s + ", 28)   <span class=\"c\"># vòng " + n + ": SHIFTS[" + (n - 1) + "] = " + r.s + " → C" + n + " = " + h28(r.c) + ", D" + n + " = " + h28(r.d) + "</span>\n" +
+      "k = <span class=\"fn\">permute</span>((c << 28) | d, PC2, 56)        <span class=\"c\"># ghép C‖D rồi chọn 48 bit → K" + n + " = " + b2h(r.k) + "</span>";
+  }
+
+  function renderIP() {
+    var enc = D.enc;
+    $("ip-in").innerHTML = grid(D.b64, 8, function (i) { return ct(Math.floor(i / 8)); }, function (i) { return String(i + 1); }, null,
+      function (g) { return "byte " + (g + 1); });
+    $("ip-out").innerHTML = grid(enc.ip, 8, function (i) { return ct(Math.floor((IP[i] - 1) / 8)); }, function (i) { return "←" + IP[i]; }) +
+      row(tag("l", "L0"), mono(b2h(enc.ip.slice(0, 32))), tag("r", "R0"), mono(b2h(enc.ip.slice(32))), '<span class="mini">32 bit đầu | 32 bit sau</span>');
+  }
+
+  function renderRound() {
+    var r = D.enc.rounds[st.rd], n = r.idx + 1, F = r.F;
+    $("rd-chips").innerHTML = D.enc.rounds.map(function (x, i) { return '<button class="chip" type="button" data-rd="' + i + '" aria-pressed="' + (i === st.rd) + '">' + (i + 1) + "</button>"; }).join("");
+    $("rd-in").innerHTML = row(tag("l", "L" + (n - 1)), mono(b2h(r.L)), tag("r", "R" + (n - 1)), mono(b2h(r.R)),
+      '<span class="mini">' + (n === 1 ? "= kết quả IP" : "= kết quả vòng " + (n - 1)) + "</span>");
+    $("rd-key").innerHTML = row(tag("k", "K" + n), mono(b2h(r.k)), '<span class="mini">48 bit, làm ở Phần A</span>');
+    // a. Expand
+    $("a-in").innerHTML = grid(r.R, 4, function (i) { return ct(Math.floor(i / 4)); }, function (i) { return String(i + 1); }, null,
+      function (g) { return "nhóm " + (g + 1); });
+    $("a-out").innerHTML = '<div class="stack">' + grid(F.e, 6, function (i) { return ct(Math.floor((E[i] - 1) / 4)); }, function (i) { return "←" + E[i]; }, null,
+      function (g) { return "→ S" + (g + 1); }) + row(mono(b2h(F.e)), '<span class="mini">48 bit, hex</span>') + "</div>";
+    // b. XOR
+    var t = '<table class="sum-table"><thead><tr><th>Nhóm</th><th>E(R)</th><th>K' + n + "</th><th>= E ⊕ K</th></tr></thead><tbody>";
+    F.boxes.forEach(function (b) { t += '<tr><td class="t">→ S' + (b.i + 1) + "</td><td>" + b.ge + "</td><td>" + b.gk + "</td><td><b>" + b.g + "</b></td></tr>"; });
+    $("b-table").innerHTML = t + '</tbody><tfoot><tr><td class="t">Hex</td><td>' + b2h(F.e) + "</td><td>" + b2h(r.k) + "</td><td><b>" + b2h(F.x) + "</b></td></tr></tfoot></table>";
+    // c. S-box
+    var c = '<table class="sum-table"><thead><tr><th>S-box</th><th>Vào 6 bit</th><th>Hàng = đầu+cuối</th><th>Cột = 4 bit giữa</th><th>Ô trong bảng</th><th>Ra 4 bit</th></tr></thead><tbody>';
+    F.boxes.forEach(function (b) {
+      c += '<tr class="click ' + (b.i === st.sb ? "sel" : "") + '" data-sb="' + b.i + '"><td class="t">S' + (b.i + 1) + "</td><td>" +
+        '<span style="color:var(--r);font-weight:700">' + b.g[0] + "</span>" + '<span style="color:var(--l);font-weight:700">' + b.g.slice(1, 5) + "</span>" +
+        '<span style="color:var(--r);font-weight:700">' + b.g[5] + "</span></td><td>" + b.g[0] + b.g[5] + " = " + b.row + "</td><td>" + b.g.slice(1, 5) + " = " + b.col +
+        "</td><td>" + b.v.toString(16).toUpperCase() + " (" + b.v + ")</td><td><b>" + b.o + "</b></td></tr>";
+    });
+    $("c-table").innerHTML = c + "</tbody></table>";
+    $("c-out").innerHTML = row(grid(F.s, 4, function (i) { return ct(Math.floor(i / 4)); }, null, null, function (g) { return "S" + (g + 1); }), mono(b2h(F.s)));
+    renderSbox();
+    // d. P
+    $("d-in").innerHTML = grid(F.s, 4, function (i) { return ct(Math.floor(i / 4)); }, function (i) { return String(i + 1); }, null, function (g) { return "từ S" + (g + 1); });
+    $("d-out").innerHTML = '<div class="stack">' + grid(F.f, 4, function (i) { return ct(Math.floor((P[i] - 1) / 4)); }, function (i) { return "←" + P[i]; }) +
+      row(tag("f", "F"), mono(b2h(F.f))) + "</div>";
+    // e
+    var e = '<table class="sum-table"><thead><tr><th></th><th>Hex</th><th>32 bit</th></tr></thead><tbody>' +
+      '<tr><td class="t">L' + (n - 1) + "</td><td>" + b2h(r.L) + "</td><td>" + r.L.replace(/(....)/g, "$1 ") + "</td></tr>" +
+      '<tr><td class="t">⊕ F</td><td>' + b2h(F.f) + "</td><td>" + F.f.replace(/(....)/g, "$1 ") + "</td></tr>" +
+      '<tr class="sel"><td class="t">= R' + n + "</td><td><b>" + b2h(r.nR) + "</b></td><td><b>" + r.nR.replace(/(....)/g, "$1 ") + "</b></td></tr></tbody></table>";
+    $("e-table").innerHTML = e;
+    // f
+    $("f-svg").innerHTML = swapSvg(r, n);
+    $("f-next").innerHTML = n < 16 ? "Kết quả này là đầu vào vòng " + (n + 1) + ". Chọn số " + (n + 1) + " ở phần B2 để xem tiếp, hoặc xem bảng 16 vòng ngay dưới."
+      : "Đây là vòng 16, vòng cuối. Tiếp theo là đổi chỗ lần cuối và IP⁻¹.";
+  }
+  function renderSbox() {
+    var b = D.enc.rounds[st.rd].F.boxes[st.sb], tb = S[st.sb];
+    $("c-box-title").textContent = "Bảng S" + (st.sb + 1) + ": hàng " + b.row + ", cột " + b.col + " → " + b.v.toString(16).toUpperCase() + " = " + b.o;
+    var h = '<table><thead><tr><th>hàng \\ cột</th>';
+    for (var c = 0; c < 16; c++) h += '<th class="' + (c === b.col ? "hit-col" : "") + '">' + c.toString(16).toUpperCase() + "</th>";
+    h += "</tr></thead><tbody>";
+    for (var r = 0; r < 4; r++) {
+      h += '<tr><th class="' + (r === b.row ? "hit-row" : "") + '">' + r + " (" + bin(r, 2) + ")</th>";
+      for (c = 0; c < 16; c++) h += '<td class="' + (r === b.row && c === b.col ? "hit" : r === b.row ? "hit-row" : c === b.col ? "hit-col" : "") + '">' + tb[r][c].toString(16).toUpperCase() + "</td>";
+      h += "</tr>";
+    }
+    $("c-box").innerHTML = h + "</tbody></table>";
+    document.querySelectorAll("[data-sb]").forEach(function (el) { el.classList.toggle("sel", +el.dataset.sb === st.sb); });
+  }
+  function swapSvg(r, n) {
+    return '<svg class="swap" viewBox="0 0 560 300" role="img" aria-label="Sơ đồ chữ X vòng ' + n + '"><defs>' +
+      '<marker id="mL" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto"><path class="ah-l" d="M0,0 L10,5 L0,10 z"/></marker>' +
+      '<marker id="mR" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto"><path class="ah-r" d="M0,0 L10,5 L0,10 z"/></marker>' +
+      '<marker id="mF" markerWidth="10" markerHeight="10" refX="7" refY="5" orient="auto"><path class="ah-f" d="M0,0 L10,5 L0,10 z"/></marker></defs>' +
+      '<rect class="box-l" x="20" y="14" width="150" height="46" rx="8"/><text x="95" y="34" text-anchor="middle">L' + (n - 1) + '</text><text x="95" y="52" text-anchor="middle">' + b2h(r.L) + "</text>" +
+      '<rect class="box-r" x="390" y="14" width="150" height="46" rx="8"/><text x="465" y="34" text-anchor="middle">R' + (n - 1) + '</text><text x="465" y="52" text-anchor="middle">' + b2h(r.R) + "</text>" +
+      '<rect class="box-f" x="320" y="96" width="140" height="44" rx="8"/><text x="390" y="116" text-anchor="middle">F</text><text x="390" y="133" text-anchor="middle">' + b2h(r.F.f) + "</text>" +
+      '<text class="cap" x="468" y="114">← K' + n + "</text>" +
+      '<path class="ln-r" d="M465,60 L465,78 L390,78 L390,94" marker-end="url(#mR)"/>' +
+      '<circle class="xor-c" cx="350" cy="190" r="15"/><path class="plus" d="M335,190 H365 M350,175 V205"/>' +
+      '<path class="ln-f" d="M390,140 L390,190 L367,190" marker-end="url(#mF)"/>' +
+      '<path class="ln-l" d="M95,60 L95,90 L332,182" marker-end="url(#mL)"/><text class="cap" x="160" y="112">L cũ đi vào ⊕</text>' +
+      '<path class="ln-r" d="M490,60 L490,70 L520,70 L520,228 L125,236" marker-end="url(#mR)"/><text class="cap" x="320" y="250" text-anchor="middle">R cũ chép nguyên sang trái</text>' +
+      '<path class="ln-r" d="M350,205 L425,238" marker-end="url(#mR)"/>' +
+      '<rect class="box-l" x="20" y="240" width="150" height="46" rx="8"/><text x="95" y="260" text-anchor="middle">L' + n + " = R" + (n - 1) + '</text><text x="95" y="278" text-anchor="middle">' + b2h(r.nL) + "</text>" +
+      '<rect class="box-r" x="390" y="240" width="150" height="46" rx="8"/><text x="465" y="260" text-anchor="middle">R' + n + ' = L⊕F</text><text x="465" y="278" text-anchor="middle">' + b2h(r.nR) + "</text></svg>";
+  }
+
+  function renderEnd() {
+    var enc = D.enc, rs = enc.rounds;
+    var t = '<table class="sum-table"><thead><tr><th>Vòng</th><th>Khóa con</th><th>F</th><th>L sau vòng</th><th>R sau vòng</th></tr></thead><tbody>' +
+      '<tr><td class="t">IP</td><td></td><td></td><td>' + b2h(enc.ip.slice(0, 32)) + "</td><td>" + b2h(enc.ip.slice(32)) + "</td></tr>";
+    rs.forEach(function (r, i) {
+      t += '<tr class="click ' + (i === st.rd ? "sel" : "") + '" data-go-rd="' + i + '"><td class="t">' + (i + 1) + "</td><td>" + b2h(r.k) + "</td><td>" + b2h(r.F.f) +
+        "</td><td>" + b2h(r.nL) + "</td><td><b>" + b2h(r.nR) + "</b></td></tr>";
+    });
+    $("t16").innerHTML = t + "</tbody></table>";
+    var last = rs[15];
+    $("fp-in").innerHTML = row(tag("l", "L16"), mono(b2h(last.nL)), tag("r", "R16"), mono(b2h(last.nR))) +
+      row('<span class="mini">đổi chỗ →</span>', tag("r", "R16"), mono(b2h(last.nR)), tag("l", "L16"), mono(b2h(last.nL)));
+    $("fp-out").innerHTML = grid(enc.out, 8, function (i) { return IP_INV[i] <= 32 ? "var(--r)" : "var(--l)"; }, function (i) { return "←" + IP_INV[i]; }) +
+      row(tag("f", "Bản mã"), mono(b2h(enc.out)), '<span class="mini">cam = lấy từ R16, xanh = lấy từ L16</span>');
+    $("res-out").innerHTML = tag("r", "Bản rõ") + mono(st.block) + '<span class="arrow">→</span>' + tag("f", "Bản mã") + mono(b2h(enc.out)) +
+      (st.block === "0123456789ABCDEF" && st.key.toUpperCase() === "133457799BBCDFF1" ? '<span class="mini">đúng ví dụ kinh điển 85E813540F0AB405</span>' : "");
+    var d = D.dec, g = '<table class="sum-table"><thead><tr><th>Bước</th><th>Dùng chìa</th><th>L</th><th>R</th></tr></thead><tbody>' +
+      '<tr><td class="t">Bản mã → IP</td><td></td><td>' + b2h(d.ip.slice(0, 32)) + "</td><td>" + b2h(d.ip.slice(32)) + "</td></tr>";
+    d.rounds.forEach(function (r, i) { g += '<tr><td class="t">Vòng ' + (i + 1) + "</td><td>K" + (16 - i) + " " + b2h(r.k) + "</td><td>" + b2h(r.nL) + "</td><td>" + b2h(r.nR) + "</td></tr>"; });
+    g += '<tr class="sel"><td class="t">Đổi chỗ + IP⁻¹</td><td></td><td colspan="2"><b>' + b2h(d.out) + "</b> " + (d.out === D.b64 ? "đúng bản rõ ban đầu" : "sai") + "</td></tr>";
+    $("dec-table").innerHTML = g + "</tbody></table>";
+  }
+
+  function renderText() {
+    var data = Array.from(new TextEncoder().encode($("inT").value));
+    var n = 8 - data.length % 8, padded = data.concat(Array(n).fill(n)), keys = D.keys, rk = keys.slice().reverse();
+    var blocks = [], cblocks = [], back = [];
+    for (var i = 0; i < padded.length; i += 8) {
+      var blk = padded.slice(i, i + 8), c = bitsToBytes(cryptBlock(bytesToBits(blk), keys).out);
+      blocks.push(blk); cblocks.push(c); back = back.concat(bitsToBytes(cryptBlock(bytesToBits(c), rk).out));
+    }
+    var chars = Array.from($("inT").value).map(function (ch) { var b = new TextEncoder().encode(ch).length; return esc(ch === " " ? "␣" : ch) + (b > 1 ? "<small> (" + b + " byte)</small>" : ""); }).join(" · ");
+    $("t-bytes").innerHTML = "<p><b>Chữ → byte</b> (UTF-8): " + chars + "</p>" + row(mono(hexBytes(data)), '<span class="mini">' + data.length + " byte</span>");
+    $("t-pad").innerHTML = "<p><b>Đệm:</b> " + data.length + " byte, chia 8 dư " + (data.length % 8) + " → thêm <b>" + n + " byte giá trị " + bin(n, 8) + " (" + n.toString(16).toUpperCase().padStart(2, "0") + ")</b></p>" +
+      blocks.map(function (b, i) {
+        var h = b.map(function (x, j) { var isPad = i * 8 + j >= data.length; return '<span style="' + (isPad ? "color:var(--hl);text-decoration:underline" : "") + '">' + x.toString(16).toUpperCase().padStart(2, "0") + "</span>"; }).join(" ");
+        return row(tag("r", "Khối " + (i + 1)), '<b class="mono">' + h + "</b>");
+      }).join("");
+    $("t-enc").innerHTML = "<p><b>Mã từng khối</b> bằng DES (16 vòng như trên, cùng khóa):</p>" +
+      cblocks.map(function (c, i) { return row(tag("f", "Khối " + (i + 1)), mono(hexBytes(c))); }).join("") +
+      (cblocks.length > 1 && cblocks.some(function (c, i) { return i > 0 && hexBytes(c) === hexBytes(cblocks[i - 1]); }) ? '<p class="mini">Hai khối rõ giống nhau ra hai khối mã giống nhau. Đó là điểm yếu của chế độ ECB.</p>' : "");
+    var unpadN = back[back.length - 1];
+    $("t-dec").innerHTML = "<p><b>Người nhận giải mã</b> với chìa K16 → K1, ra lại các khối đã đệm. Byte cuối = " + unpadN + " → bỏ " + unpadN + " byte → đọc ra:</p>" +
+      row(mono(esc(new TextDecoder().decode(new Uint8Array(back.slice(0, back.length - unpadN))))), '<span class="mini">đúng</span>');
+  }
+
+  function renderAll() { compute(); renderTop(); renderKeys(); renderIP(); renderRound(); renderEnd(); renderText(); showStep(stepIdx, false); }
+
+  // ===== đi từng bước =====
+  var steps = [
+    { id: "s-io", name: "Vào gì, ra gì" }, { id: "s-num", name: "Vì sao số lệch 1 so với slide" }, { id: "s-flow", name: "Sơ đồ các hàm" },
+    { id: "s-k0", name: "A1 · Mật khẩu → 64 ô" }, { id: "s-k1", name: "A2 · Bỏ 8 ô thừa → 56 ô" }, { id: "s-k2", name: "A3 · Cắt 2 nửa C0, D0" },
+    { id: "s-kwhy", name: "Xoay 1 hay 2 ô lấy ở đâu?" },
+    { id: "s-kround", kr: 0, name: "A4 · Lần 1 → chìa K1" }, { id: "s-kround", kr: 1, name: "A4 · Lần 2 → chìa K2" }, { id: "s-kround", kr: 2, name: "A4 · Lần 3 → chìa K3 (xoay 2)" },
+    { id: "s-ip", name: "B1 · Xáo chỗ và cắt đôi" }, { id: "s-round", rd: 0, name: "B2 · Một lần trộn làm gì" },
+    { id: "s-a", rd: 0, name: "Lần 1 · a · Kéo dài 32 → 48" }, { id: "s-b", rd: 0, name: "Lần 1 · b · Trộn với chìa" }, { id: "s-c", rd: 0, name: "Lần 1 · c · Tra 8 bảng" },
+    { id: "s-d", rd: 0, name: "Lần 1 · d · Xáo chỗ → F" }, { id: "s-e", rd: 0, name: "Lần 1 · e · L trộn F" }, { id: "s-f", rd: 0, name: "Lần 1 · f · Đổi chỗ" },
+    { id: "s-16", name: "C1 · Cả 16 lần trộn" }, { id: "s-fp", name: "C2 · Ghép lại, xáo ngược" }, { id: "s-res", name: "C3 · Bản mã" },
+    { id: "s-dec", name: "D · Giải mã" }, { id: "s-text", name: "T · Câu chữ thật + đệm" }
+  ];
+  var stepIdx = 0;
+  function showStep(i, scroll) {
+    stepIdx = Math.max(0, Math.min(steps.length - 1, i));
+    var s = steps[stepIdx];
+    if (s.kr != null && s.kr !== st.kr) { st.kr = s.kr; renderKeyRound(); }
+    if (s.rd != null && s.rd !== st.rd) { st.rd = s.rd; renderRound(); renderEnd(); }
+    document.querySelectorAll(".card.is-current").forEach(function (el) { el.classList.remove("is-current"); });
+    var el = $(s.id);
+    el.classList.add("is-current");
+    if (scroll) el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    $("where").innerHTML = "<span>" + (stepIdx + 1) + "/" + steps.length + "</span>" + esc(s.name);
+    $("prog").style.width = ((stepIdx + 1) / steps.length * 100) + "%";
+    $("prev").disabled = stepIdx === 0; $("next").disabled = stepIdx === steps.length - 1;
+  }
+  $("prev").addEventListener("click", function () { showStep(stepIdx - 1, true); });
+  $("next").addEventListener("click", function () { showStep(stepIdx + 1, true); });
+  document.addEventListener("keydown", function (e) {
+    if (e.target.tagName === "INPUT") return;
+    if (e.key === "ArrowRight") { showStep(stepIdx + 1, true); e.preventDefault(); }
+    if (e.key === "ArrowLeft") { showStep(stepIdx - 1, true); e.preventDefault(); }
+  });
+  function stepFor(id) { for (var i = 0; i < steps.length; i++) if (steps[i].id === id) return i; return 0; }
+
+  // ===== bấm =====
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-kr],[data-rd],[data-sb],[data-go],[data-go-rd]");
+    if (!t) return;
+    if (t.dataset.kr != null) { st.kr = +t.dataset.kr; renderKeyRound(); }
+    else if (t.dataset.rd != null) { st.rd = +t.dataset.rd; renderRound(); renderEnd(); }
+    else if (t.dataset.sb != null) { st.sb = +t.dataset.sb; renderSbox(); }
+    else if (t.dataset.goRd != null) { st.rd = +t.dataset.goRd; renderRound(); renderEnd(); showStep(stepFor("s-round"), true); }
+    else if (t.dataset.go) { showStep(stepFor(t.dataset.go), true); }
+  });
+
+  // ===== nhập =====
+  function readInputs() {
+    var b = $("inB").value.trim().toUpperCase(), k = $("inK").value, msg = [];
+    var okB = /^[0-9A-F]{16}$/.test(b), okK = !!parseKey(k);
+    $("inB").setAttribute("aria-invalid", String(!okB)); $("inK").setAttribute("aria-invalid", String(!okK));
+    if (!okB) msg.push("Khối bản rõ phải đúng 16 ký tự hex (0–9, A–F), ví dụ 0123456789ABCDEF.");
+    if (!okK) msg.push("Khóa phải là 16 ký tự hex hoặc đúng 8 ký tự, ví dụ 133457799BBCDFF1 hoặc nhom2026.");
+    $("err").hidden = !msg.length; $("err").textContent = msg.join(" ");
+    if (okB && okK) { st.block = b; st.key = k.trim(); renderAll(); }
+  }
+  $("form").addEventListener("submit", function (e) { e.preventDefault(); readInputs(); });
+  $("btnSample").addEventListener("click", function () { $("inB").value = "0123456789ABCDEF"; $("inK").value = "133457799BBCDFF1"; readInputs(); });
+  $("inT").addEventListener("input", renderText);
+
+  // mở từ form trang chủ bản tĩnh: des.html?t=Xin%20chào&k=133457799BBCDFF1
+  var q = new URLSearchParams(location.search);
+  if (q.get("t")) $("inT").value = q.get("t");
+  if (q.get("k")) $("inK").value = q.get("k");
+  if (q.get("k")) readInputs(); else renderAll();
+  if (q.get("t")) renderText();
+})();
+</script>
