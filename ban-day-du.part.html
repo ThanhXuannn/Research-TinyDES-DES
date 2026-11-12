@@ -1,0 +1,21 @@
+<section class="card">
+  <h2 class="card-title">Các trang này cần chạy máy chủ Python</h2>
+  <p>Bản trên mạng chỉ gồm HTML, CSS, JavaScript. Bốn trang dưới đây cần chạy code Python của nhóm trên máy (Flask + SQLite):</p>
+  <table class="log">
+    <tr><th>Trang</th><th>Làm gì</th></tr>
+    <tr><td>Tấn công TinyDES</td><td>4 kịch bản: chỉ biết bản mã, biết bản rõ, chọn bản rõ (bảng tra 256 dòng), gặp nhau ở giữa (TinyDES 2 lớp)</td></tr>
+    <tr><td>Đo thời gian</td><td>DES nhóm tự viết so với thư viện pycryptodome, 1 KB → 1 MB</td></tr>
+    <tr><td>Kiểm thử</td><td>Chạy test_runner.py: slide 72, 16 ca NIST, thư viện chuẩn (Passed 43/43)</td></tr>
+    <tr><td>Lịch sử</td><td>Xem mọi thao tác đã ghi trong history.db</td></tr>
+  </table>
+  <p class="hint">Vét cạn khóa, tấn công chọn bản rõ và sửa tin vẫn thử được ngay trên bản này, ở trang <a href="chat.html">Demo: An gửi Bình</a>.</p>
+</section>
+<section class="card">
+  <h2 class="card-title">Cách chạy bản đầy đủ</h2>
+  <ol class="clean steps">
+    <li>Mở terminal ở thư mục đồ án.</li>
+    <li><code>python -m venv .venv</code> (chỉ lần đầu), rồi <code>source .venv/bin/activate</code> (Windows: <code>.venv\Scripts\activate</code>).</li>
+    <li><code>pip install -r requirements.txt</code></li>
+    <li><code>python app.py</code>, rồi mở <code>http://127.0.0.1:5000</code></li>
+  </ol>
+</section>
